@@ -1,5 +1,5 @@
 const all_data = new Data("data/Data.csv", "data/Rules.csv");
-all_data.importData().then(() => all_data.importRules()).catch((e) => {
+all_data.importData().then(() => all_data.importRules()).then(() => all_data.createSimpleDAG()).catch((e) => {
     // console.log(e.toString());
     throw(e);
 });

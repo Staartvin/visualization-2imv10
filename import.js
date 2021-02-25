@@ -4,6 +4,7 @@ class Data {
         this.path_to_rules = path_to_rules;
         this.rules = new Rules();
         this.metadata = new MetaData();
+        this.DAG = [];
     }
 
     importData() {
@@ -52,7 +53,6 @@ class Data {
                 feature.addValue(value);
             }
         });
-        console.log(this);
     }
 
     importRules() {
@@ -97,12 +97,10 @@ class Data {
                                 let value = condition[1];
 
                                 try { // try to create actual Condition
-                                    condition = new Condition(that.metadata.getFeature(feature), value);
+                                    rule.addCondition(that.metadata.getFeature(feature), value);
                                 } catch (e) {
                                     reject(e);
                                 }
-
-                                rule.addCondition(condition);
                             }
                             that.rules.addRule(rule)
                         } else {
@@ -118,16 +116,90 @@ class Data {
                         }
                     });
 
+                    resolve();
+
                     // Do other stuff
                 }
             });
         });
 
-        console.log(this);
+    }
 
+    // Create DAG where each rule is on a line
+    createSimpleDAG() {
+        console.log(this);
+        this.orderingOfFeatures = this.getOrderingOfFeatures();
+        this.createNode(0, 0);
+
+        console.log(this.DAG);
+    }
+
+    createNode(rule_index, feature_index) {
+        const rule = this.rules.rules[rule_index];
+        let isDefault = true;
+        let node_feature;
+        let node_value;
+        let new_feature_index;
+        for (let i = feature_index; i < this.orderingOfFeatures.length; i++) {
+            const feature = this.orderingOfFeatures[i];
+            const condition_value = rule.getConditionByFeature(feature);
+            if (condition_value !== null){
+                isDefault = false;
+                node_feature = feature;
+                node_value = condition_value;
+                new_feature_index = i + 1;
+                break;
+            }
+        }
+        if (isDefault){
+            let node =  new Node(rule, null, null, rule.label, null, null);
+            this.DAG.push(node);
+        } else {
+            if (this.getNode(rule, node_feature, node_value) != null){
+                return;
+            }
+
+            let true_node = this.createNode(rule_index, new_feature_index);
+            let false_node = this.createNode(rule_index + 1, 0);
+            let node = new Node(rule, node_feature, node_value, null, true_node, false_node);
+            this.DAG.push(node);
+        }
+    }
+
+    getNode(rule, node_feature, node_value){
+        for (let node of this.DAG){
+            if (node.rule === rule && node.feature === node_feature && node.value === node_value && node.label === null){
+                return node;
+            }
+        }
+        return null;
     }
 
 
+    getOrderingOfFeatures() {
+        return [...this.metadata.features.keys()];
+    }
+}
+
+// class DAG {
+//     constructor(){
+//         this.DAG =
+//     }
+// }
+
+class Node {
+    // a condition is met if the feature is equal to the value
+    constructor(rule, feature, value, label, true_node, false_node) {
+        this.rule = rule;
+        this.feature = feature; //the condition that should be satisfied
+        this.value = value;
+        this.label = label;
+        this.true_node = true_node;
+        this.weight_to_true_node = 1;
+        this.false_node = false_node;
+        this.weight_to_false_node = 1;
+
+    }
 }
 
 class MetaData {
@@ -137,11 +209,15 @@ class MetaData {
     }
 
     addFeature(feature) {
-        this.features[feature.name] = feature;
+        this.features.set(feature.name, feature);
     }
 
     getFeature(feature_name) {
-        return this.features[feature_name];
+        if (this.features.has(feature_name)) {
+            return this.features.get(feature_name);
+        } else {
+            throw new Error(`Feature ${feature_name} does not exist.`);
+        }
     }
 
 }
@@ -170,46 +246,38 @@ class Rules {
     addRule(rule) {
         this.rules.push(rule);
     }
+
+    getRule(index) {
+        return this.rules[index];
+    }
 }
 
 class Rule {
     constructor(label_feature, label) {
-        this.conditions = new Set();
+        this.conditions = new Map();
         if (!label_feature.values.has(label)) { //check if value of label actually exists
             throw new Error(`Label \'${label}\' does not occur in the label set`);
         }
         this.label = label;
     }
 
-    addCondition(condition) {
-        this.conditions.add(condition);
-    }
-
-}
-
-class Condition {
-    constructor(feature, value) {
-        this.feature = feature; // store the feature
-        if (!feature.values.has(value)) { //check if value actually appears in the feature
-            throw new Error(`The value \'${label}\' does not occur in the feature ${feature.name}`);
+    addCondition(feature, value) {
+        if (!feature.values.has(value)) {
+            throw new Error(`The value \'${value}\' does not occur in the feature ${feature.name}`);
         }
-        this.value = value;
+        this.conditions.set(feature.name, value);
     }
 
-    satisfiesCondition(value) {
-        return (this.value === value)
-    }
-}
-
-class DAG {
-
-}
-
-class Node {
-    // a condition is met if the feature is equal to the value
-    constructor(feature, value, true_node, false_node) {
+    getConditionByFeature(feature) {
+        if (this.conditions.has(feature)) {
+            return this.conditions.get(feature);
+        } else {
+            return null;
+        }
 
     }
 }
+
+
 
 
