@@ -1,0 +1,4 @@
+if contact = unknown and marital = married then no  (974 / 251)
+if housing = no and loan = no then yes  (1517 / 2883)
+if contact = unknown and loan = yes then no  (84 / 23)
+else no  (9 / 9)
