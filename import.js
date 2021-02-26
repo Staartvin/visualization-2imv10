@@ -8,8 +8,9 @@ class Data {
     }
 
     /**
-     * Import the data
-     * @returns {Promise<unknown>}
+     * Import the data. Returns a promise that will resolve if the data is correctly imported.
+     * If an error occured, the promise is rejected.
+     * @returns {Promise}
      */
     importData() {
         let that = this;
@@ -63,8 +64,9 @@ class Data {
     }
 
     /**
-     * Import rules of a csv, rules will be stored an ordered rule list
-     * @returns {Promise<unknown>}
+     * Import rules of a csv, rules will be stored as an ordered rule list. This method returns a promise that is rejected
+     * if the rules could not be imported successfully. If they were correctly imported, the promise is resolved.
+     * @returns {Promise}
      */
     importRules() {
         let that = this;
@@ -127,9 +129,8 @@ class Data {
                         }
                     });
 
+                    // We successfully imported the rules.
                     resolve();
-
-                    // Do other stuff
                 }
             });
         });
@@ -166,9 +167,9 @@ class Data {
      *          Then this node is an outcome node
      *              We check if it exists or we create one and return this after adding it to the DAG.
      *
-     * @param rule_index
-     * @param feature_index
-     * @returns {Node|*|null}
+     * @param {number} rule_index
+     * @param {number} feature_index
+     * @returns {?Node}
      */
     createSimpleNode(rule_index, feature_index) {
         const rule = this.rules.rules[rule_index]; //request rule belonging to the rule_index
@@ -179,7 +180,7 @@ class Data {
         for (let i = feature_index; i < this.orderingOfFeatures.length; i++) { // loop over the remaining features (features before i are already checked in a previous call))
             const feature = this.orderingOfFeatures[i]; // get the ith feature of the ordered list
             const condition_value = rule.getConditionByFeature(feature); // request condition of this future of the given rule
-            if (condition_value !== null){ //If not null, then there exists a condition with this feature
+            if (condition_value !== null) { //If not null, then there exists a condition with this feature
                 isOutcome = false; //So there is a still a condition, so not outcome node
                 node_feature = feature; //store feature for new node
                 node_value = condition_value; //store value for new node
@@ -187,18 +188,18 @@ class Data {
                 break;
             }
         }
-        if (isOutcome){ //no condition has been found, so this must be the outcome node
+        if (isOutcome) { //no condition has been found, so this must be the outcome node
             let already_existing_node = this.getNode(rule, this.metadata.getFeature("label"), rule.label);
-            if (already_existing_node != null){
+            if (already_existing_node != null) {
                 return already_existing_node; //this outcome node already exists, so return this one
             }
             //outcome does not exist, so we create one
-            let node =  new Node(this.DAG.getNodes().length, rule, this.metadata.getFeature("label"), rule.label, null, null);
+            let node = new Node(this.DAG.getNodes().length, rule, this.metadata.getFeature("label"), rule.label, null, null);
             this.DAG.addNode(node);
             return node;
         } else { //there has been a condition found, so this is a condition node
             let already_existing_node = this.getNode(rule, node_feature, node_value);
-            if (already_existing_node != null){
+            if (already_existing_node != null) {
                 return already_existing_node; //this condition node already exists, so return this one
             }
             // condition node does not exist, so create new one
@@ -213,14 +214,14 @@ class Data {
     /**
      * Get node by rule, feature and value (if this exists, otherwise null)
      * (rule, feature, value) is a primary key of a node
-     * @param rule object
-     * @param feature object
-     * @param value string
-     * @returns {null|*} null if not existing, a node object otherwise
+     * @param {Rule} rule
+     * @param {Feature} feature
+     * @param {string} value of feature
+     * @returns {?Node} null if not existing, a node object otherwise
      */
-    getNode(rule, feature, value){
-        for (let node of this.DAG.getNodes()){
-            if (node.rule === rule && node.feature === feature && node.value === value){
+    getNode(rule, feature, value) {
+        for (let node of this.DAG.getNodes()) {
+            if (node.rule === rule && node.feature === feature && node.value === value) {
                 return node;
             }
         }
@@ -241,32 +242,33 @@ class DAG {
     /**
      * Stores the DAG as a ordered list of nodes
      */
-    constructor(){
+    constructor() {
         this.orderedListOfNodes = [];
     }
 
     /**
      * Get all nodes of the DAG
-     * @returns {[]|*[]} List of nodes
+     * @returns {[Node]} List of nodes
      */
-    getNodes(){
+    getNodes() {
         return this.orderedListOfNodes;
     }
 
     /**
      * Add a node to the DAG
-     * @param node object
+     * @param {Node} node to add
      */
-    addNode(node){
+    addNode(node) {
         this.orderedListOfNodes.push(node);
     }
 
     /**
      * Get the first node of the topological ordering (has no incoming edges)
-     * @returns {*} Node
+     * @throws {Error} When there is no root node.
+     * @returns {Node} the root node.
      */
-    getRoodNode(){
-        if (this.orderedListOfNodes.length > 0){
+    getRootNode() {
+        if (this.orderedListOfNodes.length > 0) {
             return this.orderedListOfNodes[0];
         }
         throw new Error("DAG does not contain any nodes yet.")
@@ -276,8 +278,9 @@ class DAG {
     /**
      * Sort the DAG topologically, if no such ordering
      * then throw error that this is not a valid DAG.
+     * @throws {Error} When the current graph is not a DAG.
      */
-    topologicallySort(){
+    topologicallySort() {
         let top_ord = [];
         let S = this.getNodesWithoutIncomingEdge(top_ord); // set with nodes with no incoming edges
 
@@ -287,10 +290,9 @@ class DAG {
             S = this.getNodesWithoutIncomingEdge(top_ord); //find new nodes with no incoming edges
         }
 
-        if (top_ord.length === this.orderedListOfNodes.length){ //all nodes can be topologically sorted
-            for (let node of this.getNodes()){
-                let id = top_ord.indexOf(node.id);
-                node.id = id; //set id to topological ordering id
+        if (top_ord.length === this.orderedListOfNodes.length) { //all nodes can be topologically sorted
+            for (let node of this.getNodes()) {
+                node.id = top_ord.indexOf(node.id); //set id to topological ordering id
             }
             this.orderedListOfNodes.sort(this.compareNodes); //sort the nodes in the DAG topologically ordered
         } else { //Not all nodes are sorted, so graph must contain a cycle
@@ -300,29 +302,29 @@ class DAG {
 
     /**
      * Determine the remaining nodes with no incoming edges discounting the given nodes
-     * @param L list of integers (contains id of already sorted nodes, those should be discounted)
-     * @returns {[]} A list of nodes with no incoming edges
+     * @param {[number]} L list of integers (contains id of already sorted nodes, those should be discounted)
+     * @returns {[Node]} A list of nodes with no incoming edges
      */
-    getNodesWithoutIncomingEdge(L){
-        let S = [] ; //set of nodes with no incoming edges
-        for (let i = 0; i < this.orderedListOfNodes.length; i++){
+    getNodesWithoutIncomingEdge(L) {
+        let S = []; //set of nodes with no incoming edges
+        for (let i = 0; i < this.orderedListOfNodes.length; i++) {
             S.push(i);
         }
-        for (let node of this.orderedListOfNodes){
-            if (L.includes(node.id)){ //discount the nodes that are already toplogically sorted
+        for (let node of this.orderedListOfNodes) {
+            if (L.includes(node.id)) { //discount the nodes that are already toplogically sorted
                 let index = S.indexOf(node.id);
                 if (index !== -1) { //remove element from S
                     S.splice(index, 1);
                 }
                 continue; //continue to next loop
             }
-            if (node.true_node != null){ //check if there is a true node, if so then there is an edge to this true node
+            if (node.true_node != null) { //check if there is a true node, if so then there is an edge to this true node
                 let index = S.indexOf(node.true_node.id);
                 if (index !== -1) { //remove node from S (there is an edge to this node)
                     S.splice(index, 1);
                 }
             }
-            if (node.false_node != null){ //check if there is a false node, if so then there is an edge to this true node
+            if (node.false_node != null) { //check if there is a false node, if so then there is an edge to this true node
                 let index = S.indexOf(node.false_node.id);
                 if (index !== -1) { //remove node from S (there is an edge to this node)
                     S.splice(index, 1);
@@ -339,11 +341,11 @@ class DAG {
      * @param nodeB
      * @returns {number}
      */
-    compareNodes( nodeA, nodeB ) {
-        if ( nodeA.id < nodeB.id ){
+    compareNodes(nodeA, nodeB) {
+        if (nodeA.id < nodeB.id) {
             return -1;
         }
-        if ( nodeA.id > nodeB.id ){
+        if (nodeA.id > nodeB.id) {
             return 1;
         }
         return 0;
@@ -353,10 +355,11 @@ class DAG {
      * TODO implement this function
      * Function that assigns weights to the edges according to the data flow
      */
-    assignWeights(){
+    assignWeights() {
 
     }
 }
+
 class Node {
     /**
      * Stores all attributes of a node
@@ -382,7 +385,7 @@ class Node {
      * Check whether this node is a leaf of the DAG, so final node
      * @returns {boolean}
      */
-    isLabelNode(){
+    isLabelNode() {
         return (this.feature.isLabel);
     }
 }
