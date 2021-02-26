@@ -1,4 +1,7 @@
 class StructuralView {
+
+    static DAG = null;
+
     constructor(p) {
         this._p = null;
         this.p = p;
@@ -19,9 +22,10 @@ class StructuralView {
     get draw() {
         let self = this;
         return function () {
-            if (!self.dag) {
+            if (!StructuralView.DAG) {
                 return;
             }
+
         }
     }
 
@@ -45,6 +49,15 @@ class StructuralView {
         this._p = original;
         this._p.draw = this.draw;
         this._p.setup = this.setup;
+    }
+
+    /**
+     * Set the DAG of the structural view.
+     * @param dag
+     */
+    static setDagData(dag) {
+        StructuralView.DAG = dag
+        console.log(`Loaded DAG into structural view!`)
     }
 }
 
@@ -253,7 +266,7 @@ class Drawing {
 
     constructor() {
         // Generate views automatically.
-        this.structuralView = new p5(this.buildStructuralView);
+        this.structuralDrawing = new p5(this.buildStructuralView);
         this.nodeView = new p5(this.buildNodeView);
         this.detailedView = new p5(this.buildDetailedView);
         this.filterView = new p5(this.buildFilterView);
@@ -261,7 +274,7 @@ class Drawing {
     }
 
     buildStructuralView(p) {
-        let sketch = new StructuralView(p);
+       return new StructuralView(p);
     }
 
     buildNodeView(p) {

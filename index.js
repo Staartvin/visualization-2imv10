@@ -1,4 +1,3 @@
-
 // Load data files
 const all_data = new Data("data/Data.csv", "data/RulesSample.csv");
 const drawingTool = new Drawing();
@@ -7,10 +6,15 @@ const drawingTool = new Drawing();
 all_data.importData()
     .then(() => all_data.importRules())
     .then(() => all_data.createSimpleDAG())
-    .then(() => drawingTool.s)
+    .then(() => {
+        console.log("Created DAG!")
+
+        StructuralView.setDagData(all_data.DAG);
+
+    })
     .catch((e) => {
-    // console.log(e.toString());
-    throw(e);
+        // console.log(e.toString());
+        throw(e);
     });
 
 
