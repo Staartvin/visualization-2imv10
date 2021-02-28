@@ -10,6 +10,7 @@ all_data.importData()
         console.log("Created DAG!")
 
         StructuralView.setDagData(all_data.DAG);
+        StructuralView.setFeatureOrder(all_data.getOrderingOfFeatures());
 
     })
     .catch((e) => {
