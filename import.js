@@ -97,7 +97,7 @@ class Data {
                             let label = actual_rule[1].trim();
                             let rule;
                             try { //try to create rule
-                                rule = new Rule(that.metadata.getFeature("label"), label); // create rule
+                                rule = new Rule(that.metadata.getFeature("label"), label, true_positives, false_positives); // create rule
                             } catch (e) {
                                 reject(e);
                             }
@@ -142,7 +142,7 @@ class Data {
      */
     createSimpleDAG() {
         // order the nodes
-        this.orderingOfFeatures = this.getOrderingOfFeatures();
+        this.orderingOfFeatures = this.getOrderingOfFeatures(this.rules.rules);
         // create Simple Node is a recursive function, so creating the first node, will recursively create all nodes
         let node = this.createSimpleNode(0, 0);
         // a DAG can be topologically sorted
@@ -233,8 +233,26 @@ class Data {
      * Returns the ordering of the feature as they should appear in the DAG
      * @returns {[Feature]} ordered list of feature names
      */
-    getOrderingOfFeatures() {
-        return [...this.metadata.features.values()];
+    getOrderingOfFeatures(rule_list) {
+        var feature_strength_list = new Map();
+
+        for (let rule_ind in rule_list){
+            let rule = rule_list[rule_ind];
+            for (let feature of rule.conditions.keys()){
+                let strength = rule.true_positives / (rule.true_positives + rule.false_positives);
+
+                if (!feature_strength_list.has(feature.name)){
+                    feature_strength_list.set(feature.name, strength);
+                }
+                else{
+                    feature_strength_list.set(feature.name, feature_strength_list.get(feature.name) + strength);
+                }
+
+            }
+        }
+        const sorted_feature_map = new Map([...feature_strength_list.entries()].sort((a, b) => b[1] - a[1]));
+
+        return  Array.from( sorted_feature_map.keys() );
     }
 }
 
@@ -475,7 +493,9 @@ class Rule {
      * @param label_feature this is the feature that contains the label
      * @param label string
      */
-    constructor(label_feature, label) {
+    constructor(label_feature, label, true_positives, false_positives) {
+        this.true_positives =  true_positives;
+        this.false_positives = false_positives;
         this.conditions = new Map(); //conditions are stored as (feature, value)
         if (!label_feature.values.has(label)) { //check if value of label actually exists
             throw new Error(`Label \'${label}\' does not occur in the label set`);
