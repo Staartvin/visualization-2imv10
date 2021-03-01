@@ -13,6 +13,7 @@ all_data.importData()
         rules = all_data.importRules();
 
         StructuralView.setDagData(all_data.DAG);
+        StructuralView.setFeatureOrder(all_data.getOrderingOfFeatures());
 
     })
     .catch((e) => {

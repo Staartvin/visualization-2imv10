@@ -290,7 +290,53 @@ class DAG {
             return this.orderedListOfNodes[0];
         }
         throw new Error("DAG does not contain any nodes yet.")
+    }
 
+    /**
+     * Get depth of the DAG. The depth of the DAG is longest path we can make from the root node
+     * (or any of the nodes that can be accessed from the root following a 'false' edge),
+     * following only 'true edges'.
+     *
+     * @returns {number} The depth of this DAG.
+     */
+    getDepth() {
+        let depth = 0;
+
+        // Start at the root node
+        let currentNode = this.getRootNode();
+        let firstNodeOfRule = this.getRootNode()
+
+        // Loop over all the left-most nodes of the DAG.
+        do {
+            // Store the current depth
+            let currentDepth = 0;
+
+            // Let's go as deep as we can go following true edges
+            while (currentNode.true_node !== undefined && currentNode.true_node !== null) {
+
+                // Obtain the node following the 'true' edge
+                currentNode = currentNode.true_node;
+
+                // Dive one deeper
+                currentDepth++;
+            }
+
+            // Update the depth if we reached a deeper level than we did before.
+            depth = Math.max(depth, currentDepth);
+
+            // If there exists another rule we can go to, let's jump to that one.
+            if (firstNodeOfRule.false_node !== undefined && firstNodeOfRule.false_node !== null) {
+                // Set the current node to the first node the rule
+                currentNode = firstNodeOfRule.false_node;
+                firstNodeOfRule = currentNode;
+
+                // Reset current depth
+                currentDepth = 0;
+            }
+
+        } while(firstNodeOfRule.false_node !== undefined && firstNodeOfRule.false_node !== null);
+
+        return depth;
     }
 
     /**
@@ -381,12 +427,12 @@ class DAG {
 class Node {
     /**
      * Stores all attributes of a node
-     * @param id integer
-     * @param rule object
-     * @param feature object
-     * @param value string
-     * @param true_node node object
-     * @param false_node node object
+     * @param {number} id integer
+     * @param {Rule} rule object
+     * @param {Feature} feature object
+     * @param {string} value string
+     * @param {Node} true_node node object
+     * @param {Node} false_node node object
      */
     constructor(id, rule, feature, value, true_node, false_node) {
         this.id = id; //the nth node in the DAG (topological ordered)
@@ -442,7 +488,7 @@ class MetaData {
 class Feature {
     /**
      * Creates feature of the existing data set
-     * @param name string
+     * @param {string} name string
      * Values is a set of strings
      * isLabel is a boolean to indicate whether the feature is a label (there is at most one such feature)
      */
