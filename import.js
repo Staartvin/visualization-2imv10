@@ -142,7 +142,7 @@ class Data {
      */
     createSimpleDAG() {
         // order the nodes
-        this.orderingOfFeatures = this.getOrderingOfFeatures(this.rules.rules);
+        this.orderingOfFeatures = this.getOrderingOfFeatures();
         // create Simple Node is a recursive function, so creating the first node, will recursively create all nodes
         let node = this.createSimpleNode(0, 0);
         // a DAG can be topologically sorted
@@ -233,26 +233,40 @@ class Data {
      * Returns the ordering of the feature as they should appear in the DAG
      * @returns {[Feature]} ordered list of feature names
      */
-    getOrderingOfFeatures(rule_list) {
-        var feature_strength_list = new Map();
+    getOrderingOfFeatures() {
+        // Store the feature and its score
+        let feature_strength_list = new Map();
 
-        for (let rule_ind in rule_list){
-            let rule = rule_list[rule_ind];
-            for (let feature of rule.conditions.keys()){
-                let strength = rule.true_positives / (rule.true_positives + rule.false_positives);
+        // For each rule, determine the strength
+        for (let rule of this.rules.rules) {
+            for (let feature of rule.conditions.keys()) {
+                let strength = rule.truePositives / (rule.truePositives + rule.falsePositives);
 
-                if (!feature_strength_list.has(feature.name)){
+                // Store the strength. Strength gets added whenever there is already some value.
+                if (!feature_strength_list.has(feature.name)) {
                     feature_strength_list.set(feature.name, strength);
-                }
-                else{
+                } else {
                     feature_strength_list.set(feature.name, feature_strength_list.get(feature.name) + strength);
                 }
 
             }
         }
+        // Sort the map based on strength score
         const sorted_feature_map = new Map([...feature_strength_list.entries()].sort((a, b) => b[1] - a[1]));
 
-        return  Array.from( sorted_feature_map.keys() );
+        // We need this reference to be able to use it in the anonymous class below
+        let that = this;
+
+        // Convert the map into an array of Feature objects.
+        let featureOrder = Array.from(sorted_feature_map, ([featureName, strength]) => {
+            return that.metadata.getFeature(featureName);
+        });
+
+        // Add the label feature at the back (otherwise we wouldn't have a label).
+        featureOrder.push(this.metadata.getFeature("label"));
+
+        // Return this feature ordering.
+        return featureOrder;
     }
 }
 
@@ -334,7 +348,7 @@ class DAG {
                 currentDepth = 0;
             }
 
-        } while(firstNodeOfRule.false_node !== undefined && firstNodeOfRule.false_node !== null);
+        } while (firstNodeOfRule.false_node !== undefined && firstNodeOfRule.false_node !== null);
 
         return depth;
     }
@@ -473,7 +487,7 @@ class MetaData {
 
     /**
      * Gets feature by feature_name
-     * @param feature
+     * @param {string} feature_name Name of the feature
      */
     getFeature(feature_name) {
         if (this.features.has(feature_name)) { //check if feature name is in the features
@@ -536,23 +550,25 @@ class Rules {
 class Rule {
     /**
      * Stores a rule with the conditions and the outcome (label) of the rule
-     * @param label_feature this is the feature that contains the label
-     * @param label string
+     * @param {Feature} labelFeature The feature that represents the outcome (so the label feature)
+     * @param {string} label The value of the outcome
+     * @param {number} truePositives True positives found for this rule
+     * @param {number} falsePositives False positives found for this rule
      */
-    constructor(label_feature, label, true_positives, false_positives) {
-        this.true_positives =  true_positives;
-        this.false_positives = false_positives;
+    constructor(labelFeature, label, truePositives = 0, falsePositives = 0) {
+        this.truePositives = truePositives;
+        this.falsePositives = falsePositives;
         this.conditions = new Map(); //conditions are stored as (feature, value)
-        if (!label_feature.values.has(label)) { //check if value of label actually exists
+        if (!labelFeature.values.has(label)) { //check if value of label actually exists
             throw new Error(`Label \'${label}\' does not occur in the label set`);
         }
         this.label = label;
     }
 
     /**
-     * Adds a condition to the map Conditions
-     * @param feature object
-     * @param value string
+     * Adds a condition to this rule
+     * @param {Feature} feature Feature to set a condition on
+     * @param {string} value Value that the should feature should be
      */
     addCondition(feature, value) {
         if (!feature.values.has(value)) { //check whether value belongs to feature
@@ -563,8 +579,8 @@ class Rule {
 
     /**
      * Get specific condition of rule by feature if existing, otherwise null
-     * @param feature
-     * @returns {null|string} returns the value of the condition belonging to that feature if existing
+     * @param {Feature} feature The feature to grab
+     * @returns {?string} returns the value of the condition belonging to that feature if existing
      */
     getConditionByFeature(feature) {
         if (this.conditions.has(feature)) {

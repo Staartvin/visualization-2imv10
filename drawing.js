@@ -20,7 +20,7 @@ class StructuralView {
     static differentLabels = [];
 
     /**
-     * Keeping track of nodes that are drawn.
+     * Keeping track of nodes that are (or should be) drawn.
      * @type {[DrawnNode]}
      */
     drawnNodes = []

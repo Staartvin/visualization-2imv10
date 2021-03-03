@@ -8,12 +8,13 @@ all_data.importData()
     .then(() => all_data.importRules())
     .then(() => all_data.createSimpleDAG())
     .then(() => {
-        console.log("Created DAG!")
-        let rules = new Rules();
-        rules = all_data.importRules();
+        console.log("Created DAG!");
 
         StructuralView.setDagData(all_data.DAG);
-        StructuralView.setFeatureOrder(all_data.getOrderingOfFeatures());
+
+        let featureOrder = all_data.getOrderingOfFeatures();
+
+        StructuralView.setFeatureOrder(featureOrder);
 
     })
     .catch((e) => {
