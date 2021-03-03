@@ -100,7 +100,7 @@ class StructuralView {
             self.drawDecisionBorder();
 
             // First calculate where nodes are.
-            self.calculateDrawings();
+            self.calculateNodePositions();
 
             // Then draw the nodes
             for (let drawnNode of self.drawnNodes) {
@@ -246,7 +246,11 @@ class StructuralView {
         }
     }
 
-    calculateDrawings() {
+    /**
+     * This method calculates the positions of the nodes based on the available features. It draws the labels at the top
+     * for each attribute and generates {DrawnNode} instances that signal where each node has to be drawn.
+     */
+    calculateNodePositions() {
 
         // Clear all drawn nodes
         this.drawnNodes.length = 0;
@@ -260,14 +264,11 @@ class StructuralView {
 
         let featureSpace = [];
 
+        // Determine the width of a column for each attribute and draw the label of that attribute on top.
         for (let index = 0; index < numberOfLabels; index++) {
             let x = featureWidth + featureWidth * index;
 
             let feature = StructuralView.featureOrder[index]
-
-            this.p.stroke(0);
-            this.p.strokeWeight(1);
-            // this.p.line(x, this.yOffset, x, this.yOffset + 1000);
             featureSpace.push({feature: feature, xStart: x - featureWidth, xEnd: x});
 
             this.p.push();
@@ -285,13 +286,14 @@ class StructuralView {
 
         }
 
-        // The node should fit in the width and height of the feature space. Hence, we take the minimum value of these two.
+        // The node should fit in the width and height of the feature space.
+        // Hence, we take the minimum value of these two.
         let sizeOfNode = Math.min(featureWidth / 2, featureHeight / 2);
 
         // We start at y = the offset + the middle of the first row.
         let y = this.yOffset + featureHeight / 2;
 
-        // Draw nodes
+        // Determine the locations of the nodes.
         for (let node of StructuralView.DAG.getNodes()) {
 
             // Find the dimensions of this feature
@@ -324,14 +326,8 @@ class StructuralView {
         this.p.strokeWeight(4);
         this.p.rect(0, 0, this.p.width, this.p.height);
 
-        // Draw title of structural view
-        this.p.noStroke();
-        this.p.fill(0);
-        // this.p.textSize(32);
-        // this.p.textAlign(this.p.CENTER);
-        // this.p.text("Structural view", this.p.width / 2, 30);
-
         // Draw horizontal bar below text
+        this.p.fill(0);
         this.p.stroke(0);
         this.p.strokeWeight(1);
         this.p.line(0, this.yOffset, this.p.width, this.yOffset);
