@@ -354,6 +354,32 @@ class DAG {
     }
 
     /**
+     * Get the height of this DAG. The height is the maximum number of levels you can go down from the root.
+     * @return {number} height of the dag.
+     */
+    getHeight() {
+        let height = 0;
+
+        // Start at the root node
+        let currentNode = this.getRootNode();
+
+        // Loop over all the left-most nodes of the DAG.
+        do {
+            // Let's go as deep as we can go following false edges
+            if (currentNode.false_node !== undefined && currentNode.false_node !== null) {
+
+                // Obtain the node following the 'false' edge
+                currentNode = currentNode.false_node;
+
+                // Dive one deeper
+                height++;
+            }
+        } while (currentNode.false_node !== undefined && currentNode.false_node !== null);
+
+        return height;
+    }
+
+    /**
      * Sort the DAG topologically, if no such ordering
      * then throw error that this is not a valid DAG.
      * @throws {Error} When the current graph is not a DAG.
