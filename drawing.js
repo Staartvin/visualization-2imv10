@@ -31,6 +31,7 @@ class StructuralView {
     // Coordinates of selector square
     selectorSquare = {x: 0, y: 0, width: 250, height: 150};
     selectorSquareDrawn = false;
+    previousMousePress = false;
 
     constructor(p) {
         this._p = null;
@@ -76,10 +77,12 @@ class StructuralView {
                 if (drawnNode.nodeData.isLabelNode()) {
                     // Draw a square instead of a circle
                     self.p.noFill();
+                    self.p.stroke(0);
                     self.p.square(drawnNode.x, drawnNode.y - drawnNode.width / 2, drawnNode.width);
                 } else {
                     // Else, we're drawing a circle
                     self.p.fill(0);
+                    self.p.stroke(0);
                     self.p.circle(drawnNode.x, drawnNode.y, drawnNode.width);
                 }
 
@@ -95,10 +98,15 @@ class StructuralView {
                     if (closeNode === undefined || closeNode === null) {
                         continue;
                     }
+                    self.p.stroke(0);
 
                     // Draw a curve between the current node and the next node.
-                    self.p.curve(drawnNode.x, drawnNode.y, drawnNode.x, drawnNode.y,
-                        closeNode.x, closeNode.y, closeNode.x, closeNode.y);
+                    self.p.line(drawnNode.x, drawnNode.y, closeNode.x, closeNode.y);
+
+                    // Draw a triangle to signal an arrowhead - it faces rightwards!
+                    self.p.triangle(closeNode.x - closeNode.width / 2, drawnNode.y,
+                        closeNode.x - closeNode.width / 2 - 10, drawnNode.y + 10,
+                        closeNode.x - closeNode.width / 2 - 10, drawnNode.y - 10);
 
                 }
 
@@ -113,17 +121,74 @@ class StructuralView {
                         continue;
                     }
 
-                    // Draw a curve between the current node and the next node.
-                    self.p.curve(drawnNode.x, drawnNode.y, drawnNode.x, drawnNode.y,
-                        closeNode.x, closeNode.y, closeNode.x, closeNode.y);
+                    if (drawnNode.x < closeNode.x) {
+                        // We're going to a node that's on the right of the currently drawn node
+                        // This means that we have to draw a line straight down (to the Y line of the next node)
+                        // and then draw a line from there to the next node.
+                        // self.p.stroke("#2cb30e");
+                        self.p.line(drawnNode.x, drawnNode.y, drawnNode.x, closeNode.y); // Draw line straight down
+                        self.p.line(drawnNode.x, closeNode.y, closeNode.x, closeNode.y); // Draw horizontal line to the next node.
+
+                        // Draw a triangle to signal an arrowhead - it faces rightwards!
+                        self.p.triangle(closeNode.x - closeNode.width / 2, closeNode.y,
+                            closeNode.x - closeNode.width / 2 - 10, closeNode.y + 10,
+                            closeNode.x - closeNode.width / 2 - 10, closeNode.y - 10);
+
+                    } else if (drawnNode.x > closeNode.x) {
+                        // We're going to a node that's on the left of the currently drawn node.
+                        // We want to draw line halfway between the two nodes.
+                        // self.p.stroke("#b50d6c");
+
+                        // Determine the distance (on the y-axis) between the two nodes.
+                        let yDistance = Math.abs(closeNode.y - drawnNode.y);
+
+                        // Draw a line halfway down.
+                        self.p.line(drawnNode.x, drawnNode.y, drawnNode.x, drawnNode.y + (yDistance / 2));
+                        // Draw line to the left.
+                        self.p.line(drawnNode.x, drawnNode.y + (yDistance / 2), closeNode.x, drawnNode.y + (yDistance / 2));
+                        // Draw line down to the next node.
+                        self.p.line(closeNode.x, drawnNode.y + (yDistance / 2), closeNode.x, closeNode.y);
+
+                        // Draw a triangle to signal an arrowhead - it faces downwards!
+                        self.p.triangle(closeNode.x, closeNode.y - closeNode.width / 2,
+                            closeNode.x - 10, closeNode.y - closeNode.width / 2 - 10,
+                            closeNode.x + 10, closeNode.y - closeNode.width / 2 - 10);
+                    } else {
+
+                        // Draw a line straight down.
+                        self.p.line(drawnNode.x, drawnNode.y, closeNode.x, closeNode.y);
+
+                        // Draw a triangle to signal an arrowhead
+                        self.p.triangle(closeNode.x, closeNode.y - closeNode.width / 2,
+                            closeNode.x - 10, closeNode.y - closeNode.width / 2 - 10,
+                            closeNode.x + 10, closeNode.y - closeNode.width / 2 - 10);
+                    }
 
                 }
             }
 
+            console.log(self.p.mouseIsPressed);
+
             if (self.p.mouseIsPressed) {
+                // Draw the selector square
                 self.selectorSquareDrawn = true;
-                self.selectorSquare.x = self.p.mouseX - self.selectorSquare.width / 2;
-                self.selectorSquare.y = self.p.mouseY - self.selectorSquare.height;
+
+                if (self.previousMousePress === false) {
+                    self.selectorSquare.x = self.p.mouseX;
+                    self.selectorSquare.y = self.p.mouseY;
+                }
+
+
+                self.selectorSquare.width = Math.abs(self.selectorSquare.x - self.p.mouseX);
+                self.selectorSquare.height = Math.abs(self.selectorSquare.y - self.p.mouseY);
+
+                self.previousMousePress = true;
+
+                // self.selectorSquare.x = self.p.mouseX - self.selectorSquare.width / 2;
+                // self.selectorSquare.y = self.p.mouseY - self.selectorSquare.height;
+            } else {
+                self.previousMousePress = false;
+               self.selectorSquareDrawn = false;
             }
 
             // Now draw selector field (if needed)
@@ -137,7 +202,7 @@ class StructuralView {
                 self.p.fill(color);
                 self.p.stroke("#fcba03");
                 self.p.strokeWeight(3);
-                self.p.rect(self.selectorSquare.x, self.selectorSquare.y + self.yOffset,
+                self.p.rect(self.selectorSquare.x, self.selectorSquare.y,
                     self.selectorSquare.width, self.selectorSquare.height);
 
 

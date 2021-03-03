@@ -415,8 +415,8 @@ class DAG {
 
     /**
      * Compare nodes topologically, so node with smaller id should become before node with larger id
-     * @param nodeA
-     * @param nodeB
+     * @param {Node} nodeA
+     * @param {Node} nodeB
      * @returns {number}
      */
     compareNodes(nodeA, nodeB) {
