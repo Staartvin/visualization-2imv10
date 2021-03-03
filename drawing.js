@@ -103,145 +103,164 @@ class StructuralView {
             self.calculateNodePositions();
 
             // Then draw the nodes
-            for (let drawnNode of self.drawnNodes) {
+            self.drawNodesAndEdges();
 
-                // Check if this is a decision node
-                if (drawnNode.nodeData.isLabelNode()) {
-                    // Draw a square instead of a circle
-                    let color = self.getColorOfOutcomeValue(drawnNode.nodeData.value);
+            // Try to draw the selector square
+            self.drawSelectorSquare();
 
-                    if (color !== null) {
-                        self.p.fill(color);
-                    }
+        }
+    }
 
-                    self.p.stroke(0);
-                    self.p.square(drawnNode.x, drawnNode.y, drawnNode.width / 2);
-                } else {
-                    // Else, we're drawing a circle
-                    self.p.fill(0);
-                    self.p.stroke(0);
-                    self.p.circle(drawnNode.x, drawnNode.y, drawnNode.width);
+    /**
+     * This method will draw the selector square. It is used by the draw() method to detect whenever the mouse is pressed.
+     */
+    drawSelectorSquare() {
+        if (this.p.mouseIsPressed) {
+            // Draw the selector square
+            this.selectorSquareDrawn = true;
+
+            // If the previous mouse press was false, we know that the user just started clicking
+            if (this.previousMousePress === false) {
+                // Set the first click as a starting point
+                this.selectorSquare.x = this.p.mouseX;
+                this.selectorSquare.y = this.p.mouseY;
+            }
+
+            // Set width and height based on distance from starting point to your mouse
+            this.selectorSquare.width = this.p.mouseX - this.selectorSquare.x ;
+            this.selectorSquare.height = this.p.mouseY - this.selectorSquare.y;
+
+            // The previous mouse press can now be set to true
+            this.previousMousePress = true;
+        } else {
+            // Previous mouse press was false.
+            this.previousMousePress = false;
+        }
+
+        // Now draw selector field (if needed)
+        if (this.selectorSquareDrawn) {
+            // Let's draw the selector field
+
+            let color = this.p.color("#fcba03");
+
+            color.setAlpha(15);
+
+            this.p.push();
+            this.p.fill(color);
+            this.p.stroke("#fcba03");
+            this.p.strokeWeight(3);
+            this.p.rectMode(this.p.CORNER);
+            this.p.rect(this.selectorSquare.x, this.selectorSquare.y,
+                this.selectorSquare.width, this.selectorSquare.height);
+            this.p.pop();
+        }
+    }
+
+    /**
+     * Draw the nodes and edges between the nodes. This method assumes that the positions of the nodes are already calculated
+     * using a function like {@link calculateNodePositions}.
+     */
+    drawNodesAndEdges() {
+        // Loop over all nodes we need to draw
+        for (let drawnNode of this.drawnNodes) {
+
+            // Check if this is a decision node
+            if (drawnNode.nodeData.isLabelNode()) {
+                // Draw a square instead of a circle
+                // Lookup the color of this outcome node
+                let color = this.getColorOfOutcomeValue(drawnNode.nodeData.value);
+
+                if (color !== null) {
+                    this.p.fill(color);
                 }
 
-                // Next draw the edges between the nodes.
+                this.p.stroke(0);
+                this.p.square(drawnNode.x, drawnNode.y, drawnNode.width / 2);
+            } else {
+                // Else, we're drawing a circle because it's a normal node.
+                this.p.fill(0);
+                this.p.stroke(0);
+                this.p.circle(drawnNode.x, drawnNode.y, drawnNode.width);
+            }
 
-                // Check if we have a 'true' edge.
-                if (drawnNode.nodeData.true_node !== null) {
-                    // Try to draw a line from this node to the true node
-                    // Grab next node
-                    let closeNode = self.drawnNodes.find(node => node.nodeData === drawnNode.nodeData.true_node);
+            // Next draw the edges between the nodes.
 
-                    // If we cannot find the next node, let's skip it.
-                    if (closeNode === undefined || closeNode === null) {
-                        continue;
-                    }
-                    self.p.stroke(0);
+            // Check if we have a 'true' edge.
+            if (drawnNode.nodeData.true_node !== null) {
+                // Try to draw a line from this node to the true node
+                // Grab next node
+                let closeNode = this.drawnNodes.find(node => node.nodeData === drawnNode.nodeData.true_node);
 
-                    // Draw a curve between the current node and the next node.
-                    self.p.line(drawnNode.x, drawnNode.y, closeNode.x, closeNode.y);
+                // If we cannot find the next node, let's skip it.
+                if (closeNode === undefined || closeNode === null) {
+                    continue;
+                }
+                this.p.stroke(0);
+
+                // Draw a curve between the current node and the next node.
+                this.p.line(drawnNode.x, drawnNode.y, closeNode.x, closeNode.y);
+
+                // Draw a triangle to signal an arrowhead - it faces rightwards!
+                this.p.triangle(closeNode.x - closeNode.width / 2, drawnNode.y,
+                    closeNode.x - closeNode.width / 2 - 10, drawnNode.y + 10,
+                    closeNode.x - closeNode.width / 2 - 10, drawnNode.y - 10);
+
+            }
+
+            // Check if we have a 'false' edge.
+            if (drawnNode.nodeData.false_node !== null) {
+                // Try to draw a line from this node to the false node
+                // Grab next node
+                let closeNode = this.drawnNodes.find(node => node.nodeData === drawnNode.nodeData.false_node);
+
+                // If we cannot find the next node, let's skip it.
+                if (closeNode === undefined || closeNode === null) {
+                    continue;
+                }
+
+                if (drawnNode.x < closeNode.x) {
+                    // We're going to a node that's on the right of the currently drawn node
+                    // This means that we have to draw a line straight down (to the Y line of the next node)
+                    // and then draw a line from there to the next node.
+                    // this.p.stroke("#2cb30e");
+                    this.p.line(drawnNode.x, drawnNode.y, drawnNode.x, closeNode.y); // Draw line straight down
+                    this.p.line(drawnNode.x, closeNode.y, closeNode.x, closeNode.y); // Draw horizontal line to the next node.
 
                     // Draw a triangle to signal an arrowhead - it faces rightwards!
-                    self.p.triangle(closeNode.x - closeNode.width / 2, drawnNode.y,
-                        closeNode.x - closeNode.width / 2 - 10, drawnNode.y + 10,
-                        closeNode.x - closeNode.width / 2 - 10, drawnNode.y - 10);
+                    this.p.triangle(closeNode.x - closeNode.width / 2, closeNode.y,
+                        closeNode.x - closeNode.width / 2 - 10, closeNode.y + 10,
+                        closeNode.x - closeNode.width / 2 - 10, closeNode.y - 10);
 
+                } else if (drawnNode.x > closeNode.x) {
+                    // We're going to a node that's on the left of the currently drawn node.
+                    // We want to draw line halfway between the two nodes.
+                    // this.p.stroke("#b50d6c");
+
+                    // Determine the distance (on the y-axis) between the two nodes.
+                    let yDistance = Math.abs(closeNode.y - drawnNode.y);
+
+                    // Draw a line halfway down.
+                    this.p.line(drawnNode.x, drawnNode.y, drawnNode.x, drawnNode.y + (yDistance / 2));
+                    // Draw line to the left.
+                    this.p.line(drawnNode.x, drawnNode.y + (yDistance / 2), closeNode.x, drawnNode.y + (yDistance / 2));
+                    // Draw line down to the next node.
+                    this.p.line(closeNode.x, drawnNode.y + (yDistance / 2), closeNode.x, closeNode.y);
+
+                    // Draw a triangle to signal an arrowhead - it faces downwards!
+                    this.p.triangle(closeNode.x, closeNode.y - closeNode.width / 2,
+                        closeNode.x - 10, closeNode.y - closeNode.width / 2 - 10,
+                        closeNode.x + 10, closeNode.y - closeNode.width / 2 - 10);
+                } else {
+
+                    // Draw a line straight down.
+                    this.p.line(drawnNode.x, drawnNode.y, closeNode.x, closeNode.y);
+
+                    // Draw a triangle to signal an arrowhead
+                    this.p.triangle(closeNode.x, closeNode.y - closeNode.width / 2,
+                        closeNode.x - 10, closeNode.y - closeNode.width / 2 - 10,
+                        closeNode.x + 10, closeNode.y - closeNode.width / 2 - 10);
                 }
 
-                // Check if we have a 'false' edge.
-                if (drawnNode.nodeData.false_node !== null) {
-                    // Try to draw a line from this node to the false node
-                    // Grab next node
-                    let closeNode = self.drawnNodes.find(node => node.nodeData === drawnNode.nodeData.false_node);
-
-                    // If we cannot find the next node, let's skip it.
-                    if (closeNode === undefined || closeNode === null) {
-                        continue;
-                    }
-
-                    if (drawnNode.x < closeNode.x) {
-                        // We're going to a node that's on the right of the currently drawn node
-                        // This means that we have to draw a line straight down (to the Y line of the next node)
-                        // and then draw a line from there to the next node.
-                        // self.p.stroke("#2cb30e");
-                        self.p.line(drawnNode.x, drawnNode.y, drawnNode.x, closeNode.y); // Draw line straight down
-                        self.p.line(drawnNode.x, closeNode.y, closeNode.x, closeNode.y); // Draw horizontal line to the next node.
-
-                        // Draw a triangle to signal an arrowhead - it faces rightwards!
-                        self.p.triangle(closeNode.x - closeNode.width / 2, closeNode.y,
-                            closeNode.x - closeNode.width / 2 - 10, closeNode.y + 10,
-                            closeNode.x - closeNode.width / 2 - 10, closeNode.y - 10);
-
-                    } else if (drawnNode.x > closeNode.x) {
-                        // We're going to a node that's on the left of the currently drawn node.
-                        // We want to draw line halfway between the two nodes.
-                        // self.p.stroke("#b50d6c");
-
-                        // Determine the distance (on the y-axis) between the two nodes.
-                        let yDistance = Math.abs(closeNode.y - drawnNode.y);
-
-                        // Draw a line halfway down.
-                        self.p.line(drawnNode.x, drawnNode.y, drawnNode.x, drawnNode.y + (yDistance / 2));
-                        // Draw line to the left.
-                        self.p.line(drawnNode.x, drawnNode.y + (yDistance / 2), closeNode.x, drawnNode.y + (yDistance / 2));
-                        // Draw line down to the next node.
-                        self.p.line(closeNode.x, drawnNode.y + (yDistance / 2), closeNode.x, closeNode.y);
-
-                        // Draw a triangle to signal an arrowhead - it faces downwards!
-                        self.p.triangle(closeNode.x, closeNode.y - closeNode.width / 2,
-                            closeNode.x - 10, closeNode.y - closeNode.width / 2 - 10,
-                            closeNode.x + 10, closeNode.y - closeNode.width / 2 - 10);
-                    } else {
-
-                        // Draw a line straight down.
-                        self.p.line(drawnNode.x, drawnNode.y, closeNode.x, closeNode.y);
-
-                        // Draw a triangle to signal an arrowhead
-                        self.p.triangle(closeNode.x, closeNode.y - closeNode.width / 2,
-                            closeNode.x - 10, closeNode.y - closeNode.width / 2 - 10,
-                            closeNode.x + 10, closeNode.y - closeNode.width / 2 - 10);
-                    }
-
-                }
-            }
-
-            if (self.p.mouseIsPressed) {
-                // Draw the selector square
-                self.selectorSquareDrawn = true;
-
-                // If the previous mouse press was false, we know that the user just started clicking
-                if (self.previousMousePress === false) {
-                    // Set the first click as a starting point
-                    self.selectorSquare.x = self.p.mouseX;
-                    self.selectorSquare.y = self.p.mouseY;
-                }
-
-                // Set width and height based on distance from starting point to your mouse
-                self.selectorSquare.width = self.p.mouseX - self.selectorSquare.x ;
-                self.selectorSquare.height = self.p.mouseY - self.selectorSquare.y;
-
-                // The previous mouse press can now be set to true
-                self.previousMousePress = true;
-            } else {
-                // Previous mouse press was false.
-                self.previousMousePress = false;
-            }
-
-            // Now draw selector field (if needed)
-            if (self.selectorSquareDrawn) {
-                // Let's draw the selector field
-
-                let color = self.p.color("#fcba03");
-
-                color.setAlpha(15);
-
-                self.p.push();
-                self.p.fill(color);
-                self.p.stroke("#fcba03");
-                self.p.strokeWeight(3);
-                self.p.rectMode(self.p.CORNER);
-                self.p.rect(self.selectorSquare.x, self.selectorSquare.y,
-                    self.selectorSquare.width, self.selectorSquare.height);
-                self.p.pop();
             }
         }
     }
