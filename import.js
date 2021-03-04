@@ -151,6 +151,18 @@ class Data {
         this.DAG.assignWeights();
     }
 
+    createExtendedDAG() {
+        // order the nodes
+        this.orderingOfFeatures = this.getOrderingOfFeatures();
+        // create Simple Node is a recursive function, so creating the first node, will recursively create all nodes
+        let conditions = new Map()
+        let node = this.createExtendedNode(0, conditions);
+        // a DAG can be topologically sorted
+        this.DAG.topologicallySort();
+        // assign the weights according to the data flow
+        this.DAG.assignWeights();
+    }
+
     /**
      * Each node belongs to a rule
      * For each rule, we loop over the ordered features
@@ -211,6 +223,65 @@ class Data {
         }
     }
 
+    createExtendedNode(rule_index, conditions){
+        const rule = this.rules.rules[rule_index]; //request rule belonging to the rule index
+        let isOutcome = true; //outcome is true until condition has been found
+        let node_feature;
+        let node_value;
+        let new_feature_index;
+        if (rule.satisfiesConditions(conditions)){
+            for (let i = 0; i < this.orderingOfFeatures.length; i++) { // loop over the remaining features (features before i are already checked in a previous call))
+                const feature = this.orderingOfFeatures[i]; // get the ith feature of the ordered list
+                if (conditions.has(feature)){ // condition has already been satisfied by a previous node
+                    let value = conditions.get(feature)
+                    if (value[0]){ //condition only indicates true (so specific has already been set)
+                        continue
+                    }
+                    if (feature.values.size == 2){
+                        continue //it is either true or false, and we already know one of the two
+                    }
+                }
+                // conditions has not been satisfied yet
+                const condition_value = rule.getConditionByFeature(feature); // request condition of this future of the given rule
+                if (condition_value !== null){ //If not null, then there exists a condition with this feature
+                    isOutcome = false; //So there is a still a condition, so not outcome node
+                    node_feature = feature; //store feature for new node
+                    node_value = condition_value; //store value for new node
+                    // new_feature_index = i + 1; //already save the index for the upcoming true node
+                    break;
+                }
+            }
+            if (isOutcome){ //no condition has been found, so this must be the outcome node
+                let already_existing_node = this.getNode(rule, this.metadata.getFeature("label"), rule.label);
+                if (already_existing_node != null & rule.isDefault()){
+                    return already_existing_node; //this outcome node already exists, so return this one
+                }
+                //outcome does not exist, so we create one
+                let node =  new Node(this.DAG.getNodes().length, rule, this.metadata.getFeature("label"), rule.label, null, null);
+                this.DAG.addNode(node);
+                return node;
+            } else { //there has been a condition found, so this is a condition node
+                // let already_existing_node = this.getNode(rule, node_feature, node_value); //TODO
+                // if (already_existing_node != null){
+                //     return already_existing_node; //this condition node already exists, so return this one
+                // }
+                // condition node does not exist, so create new one
+                let true_conditions = new Map(conditions);
+                true_conditions.set(node_feature, [true, node_value]);
+
+                let false_conditions = new Map(conditions);
+                false_conditions.set(node_feature, [false, node_value]);
+
+                let true_node = this.createExtendedNode(rule_index, true_conditions); // create the true node it has an edge to
+                let false_node = this.createExtendedNode(rule_index + 1, false_conditions); // create the false node it has an edge to
+                let node = new Node(this.DAG.getNodes().length, rule, node_feature, node_value, true_node, false_node); //create the node
+                this.DAG.addNode(node);
+                return node;
+            }
+        } else {
+            return this.createExtendedNode(rule_index + 1, conditions)
+        }
+    }
     /**
      * Get node by rule, feature and value (if this exists, otherwise null)
      * (rule, feature, value) is a primary key of a node
@@ -361,20 +432,26 @@ class DAG {
         let height = 0;
 
         // Start at the root node
-        let currentNode = this.getRootNode();
+        // let currentNode = this.getRootNode();
 
         // Loop over all the left-most nodes of the DAG.
-        do {
-            // Let's go as deep as we can go following false edges
-            if (currentNode.false_node !== undefined && currentNode.false_node !== null) {
+        // do {
+        //     // Let's go as deep as we can go following false edges
+        //     if (currentNode.false_node !== undefined && currentNode.false_node !== null) {
+        //
+        //         // Obtain the node following the 'false' edge
+        //         currentNode = currentNode.false_node;
+        //
+        //         // Dive one deeper
+        //         height++;
+        //     }
+        // } while (currentNode.false_node !== undefined && currentNode.false_node !== null);
 
-                // Obtain the node following the 'false' edge
-                currentNode = currentNode.false_node;
-
-                // Dive one deeper
+        for (let node of this.orderedListOfNodes){
+            if (node.isLabelNode()){
                 height++;
             }
-        } while (currentNode.false_node !== undefined && currentNode.false_node !== null);
+        }
 
         return height;
     }
@@ -591,6 +668,10 @@ class Rule {
         this.label = label;
     }
 
+    isDefault(){
+        return (this.conditions.size === 0)
+    }
+
     /**
      * Adds a condition to this rule
      * @param {Feature} feature Feature to set a condition on
@@ -614,6 +695,30 @@ class Rule {
         } else {
             return null;
         }
+    }
+
+    /**
+     * Checks whether rule is satisfied by conditions
+     * @param conditions Map with key: feature, value: list of a boolean (indicates equal or not) and a string (the value)
+     * @returns {boolean}
+     */
+    satisfiesConditions(conditions){
+        for (let [feature, value] of conditions){
+            let equal = value[0];
+            let feature_value = value[1]
+            if (this.conditions.has(feature)){ //check if this rule has this feature
+                if (equal){
+                    if (feature_value !== this.conditions.get(feature)){ //if not equal, then not satisfied
+                        return false
+                    }
+                } else {
+                    if (feature_value === this.conditions.get(feature)){ //if not equal, then not satisfied
+                        return false
+                    }
+                }
+            }
+        }
+        return true //all conditions are satisfied by the rule
     }
 }
 

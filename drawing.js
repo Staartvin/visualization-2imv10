@@ -71,7 +71,7 @@ class StructuralView {
         let self = this;
 
         return function () {
-            let canvas = self.p.createCanvas(self.p.windowWidth / 3, self.p.windowHeight / 2);
+            let canvas = self.p.createCanvas(self.p.windowWidth / 3, self.p.windowHeight * 3/4);
             canvas.background(255);
             canvas.position(0, 0);
 
@@ -201,9 +201,10 @@ class StructuralView {
                 this.p.line(drawnNode.x, drawnNode.y, closeNode.x, closeNode.y);
 
                 // Draw a triangle to signal an arrowhead - it faces rightwards!
+                // Size of arrow is scaled by the size of the nodes, and 10 (such that they are not too large if nodes are large).
                 this.p.triangle(closeNode.x - closeNode.width / 2, drawnNode.y,
-                    closeNode.x - closeNode.width / 2 - 10, drawnNode.y + 10,
-                    closeNode.x - closeNode.width / 2 - 10, drawnNode.y - 10);
+                    closeNode.x - closeNode.width / 2 - Math.min(closeNode.width/2, 10), drawnNode.y + Math.min(closeNode.width/2, 10),
+                    closeNode.x - closeNode.width / 2 - Math.min(closeNode.width/2, 10), drawnNode.y - Math.min(closeNode.width/2, 10));
 
             }
 
@@ -228,8 +229,8 @@ class StructuralView {
 
                     // Draw a triangle to signal an arrowhead - it faces rightwards!
                     this.p.triangle(closeNode.x - closeNode.width / 2, closeNode.y,
-                        closeNode.x - closeNode.width / 2 - 10, closeNode.y + 10,
-                        closeNode.x - closeNode.width / 2 - 10, closeNode.y - 10);
+                        closeNode.x - closeNode.width / 2 - Math.min(closeNode.width/2, 10), closeNode.y + Math.min(closeNode.width/2, 10),
+                        closeNode.x - closeNode.width / 2 - Math.min(closeNode.width/2, 10), closeNode.y - Math.min(closeNode.width/2, 10));
 
                 } else if (drawnNode.x > closeNode.x) {
                     // We're going to a node that's on the left of the currently drawn node.
@@ -248,8 +249,8 @@ class StructuralView {
 
                     // Draw a triangle to signal an arrowhead - it faces downwards!
                     this.p.triangle(closeNode.x, closeNode.y - closeNode.width / 2,
-                        closeNode.x - 10, closeNode.y - closeNode.width / 2 - 10,
-                        closeNode.x + 10, closeNode.y - closeNode.width / 2 - 10);
+                        closeNode.x - Math.min(closeNode.width/2, 10), closeNode.y - closeNode.width / 2 - Math.min(closeNode.width/2, 10),
+                        closeNode.x + Math.min(closeNode.width/2, 10), closeNode.y - closeNode.width / 2 - Math.min(closeNode.width/2, 10));
                 } else {
 
                     // Draw a line straight down.
@@ -257,8 +258,8 @@ class StructuralView {
 
                     // Draw a triangle to signal an arrowhead
                     this.p.triangle(closeNode.x, closeNode.y - closeNode.width / 2,
-                        closeNode.x - 10, closeNode.y - closeNode.width / 2 - 10,
-                        closeNode.x + 10, closeNode.y - closeNode.width / 2 - 10);
+                        closeNode.x - Math.min(closeNode.width/2, 10), closeNode.y - closeNode.width / 2 - Math.min(closeNode.width/2, 10),
+                        closeNode.x + Math.min(closeNode.width/2, 10), closeNode.y - closeNode.width / 2 - Math.min(closeNode.width/2, 10));
                 }
 
             }
@@ -279,7 +280,7 @@ class StructuralView {
         // The space per feature (based on the number of labels).
         let featureWidth = this.getCanvasWidth() / numberOfLabels;
         // The height per feature (based on the number of rules of the DAG).
-        let featureHeight = this.getCanvasHeight() / (StructuralView.heightDAG + 1);
+        let featureHeight = this.getCanvasHeight() / (StructuralView.heightDAG);
 
         let featureSpace = [];
 
@@ -536,9 +537,9 @@ class NodeView {
 
         return function () {
             // We draw an initial canvas.
-            let canvas = self.p.createCanvas(self.p.windowWidth / 3, self.p.windowHeight / 2);
+            let canvas = self.p.createCanvas(self.p.windowWidth / 3, self.p.windowHeight / 4);
             canvas.background(255);
-            canvas.position(0, self.p.windowHeight / 2);
+            canvas.position(0, self.p.windowHeight * 3/4);
 
             self.drawBorder();
         }
