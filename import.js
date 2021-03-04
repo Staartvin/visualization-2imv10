@@ -4,6 +4,8 @@ class Data {
         this.path_to_rules = path_to_rules;
         this.rules = new Rules();
         this.metadata = new MetaData();
+        this.full_data = [];
+        this.all_indeces = [];
         this.DAG = new DAG();
     }
 
@@ -21,6 +23,7 @@ class Data {
                 dynamicTyping: true, //create ints and such dynamically
                 complete: function (results) {
                     that.full_data = results.data;
+                    that.all_indeces = [...Array(that.full_data.length).keys()];
                     try {
                         that.importFeaturesAndItsValues(results);
                         resolve();
@@ -218,6 +221,7 @@ class Data {
             let true_node = this.createSimpleNode(rule_index, new_feature_index); // create the true node it has an edge to
             let false_node = this.createSimpleNode(rule_index + 1, 0); // create the false node it has an edge to
             let node = new Node(this.DAG.getNodes().length, rule, node_feature, node_value, true_node, false_node); //create the node
+            node.computeNodeData(this.full_data, this.all_indeces); //compute node data from the complete data
             this.DAG.addNode(node);
             return node;
         }
@@ -300,7 +304,7 @@ class Data {
     }
 
     /**
-     * TODO Implement function such that it orders with importance score
+     * Function that orders features accoring to their strength.
      * Returns the ordering of the feature as they should appear in the DAG
      * @returns {[Feature]} ordered list of feature names
      */
@@ -560,6 +564,7 @@ class Node {
         this.weight_to_true_node = 1;
         this.false_node = false_node;
         this.weight_to_false_node = 1;
+        this.node_data = new NodeData();
     }
 
     /**
@@ -568,6 +573,98 @@ class Node {
      */
     isLabelNode() {
         return (this.feature.isLabel);
+    }
+
+    /**
+     * Computes the part of the data that is satisfied in this node.
+     * @param {Array} all_data all data we have
+     * @param {Array} all_indeces an array with range(data_size)
+     */
+    computeNodeData(all_data, all_indeces) {
+
+        let feature_name = this.feature.name; //get the name of the feature that is checked in this node
+        let values = []
+
+        //We need to find the values that are checked for in this Node. Hence we store the values.
+        //This is an array so that if there are OR conditions for different values of the same feature
+        //we don't miss it
+        for (let [key, value] of this.rule.conditions.entries()) {
+            if (key.name === feature_name){
+                values.push(value);
+                break; //quick break to avoid redundant iterations
+            }
+        }
+
+        //for all values, we need to extract the index of the data that satisfies the condition of the node
+        //for efficiency we store the row indeces of the data
+        for(let val of values){
+            var indeces = all_data.map((e, i) => e[feature_name] === val ? i : '').filter(String);
+        }
+
+        let neg_indeces = Array.from($(all_indeces).not(indeces)) //we store the negative indeces so that we only
+                                                                  //do this inefficient operation once. We use set
+                                                                  //difference for this operation.
+
+        //set the properties of the NodeData class as computed
+        this.node_data.positiveRows = indeces;
+        this.node_data.noOfPosRows = indeces.length;
+        this.node_data.negativeRows = neg_indeces;
+        this.node_data.noOfNegRows = neg_indeces.length;
+
+    }
+}
+
+/**
+ * Stores data that will be used in the DAG for data flow between nodes.
+ * {{number}} positiveRows List of integers that satisfy the feature in this node
+ * {{number}} negativeRows List of integers that do not satisfy the feature in this node
+ * {number} noOfPosRows integer length of the positive row array. (Note that this is not the same with true
+ *                                     positives of the rule)
+ * {number} noOfNegRows integer length of the negative row array. (Note that this is not the same with false
+ *                                     positives of the rule)
+ */
+class NodeData {
+    /**
+     * Stores data that will be used in the DAG for data flow between nodes.
+     */
+    constructor() {
+        this._positiveRows = [];
+        this._negativeRows = [];
+        this._noOfPosRows = 0;
+        this._noOfNegRows = 0;
+    }
+
+    //Getter and setter methods
+    get positiveRows() {
+        return this._positiveRows;
+    }
+
+    set positiveRows(value) {
+        this._positiveRows = value;
+    }
+
+    get negativeRows() {
+        return this._negativeRows;
+    }
+
+    set negativeRows(value) {
+        this._negativeRows = value;
+    }
+
+    get noOfPosRows() {
+        return this._noOfPosRows;
+    }
+
+    set noOfPosRows(value) {
+        this._noOfPosRows = value;
+    }
+
+    get noOfNegRows() {
+        return this._noOfNegRows;
+    }
+
+    set noOfNegRows(value) {
+        this._noOfNegRows = value;
     }
 }
 
