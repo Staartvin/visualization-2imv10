@@ -10,11 +10,11 @@ all_data.importData()
     .then(() => {
         console.log("Created DAG!");
 
-        StructuralView.setDagData(all_data.DAG);
+        // Communicate feature ordering to rules view
+        RulesView.setFeatureOrder(all_data.getOrderingOfFeatures());
 
-        let featureOrder = all_data.getOrderingOfFeatures();
-
-        StructuralView.setFeatureOrder(featureOrder);
+        // Communicate rules to the rules view.
+        RulesView.setRules(all_data.rules);
 
     })
     .catch((e) => {

@@ -472,11 +472,63 @@
 //     }
 // }
 
-rulesViewWidth = 4/6;
-controlViewWidth = 1/6;
-filterViewWidth = 1/6;
+rulesViewWidth = 4 / 6;
+controlViewWidth = 1 / 6;
+filterViewWidth = 1 / 6;
 
 class RulesView {
+
+    /**
+     * The offset from top. This is where the attributes appear.
+     * @type {number}
+     */
+    yOffset = 40;
+
+    /**
+     * The margin that should be kept from the left and right border. This is single-sided, meaning that we lose
+     * 2 * xMargin pixels.
+     * @type {number}
+     */
+    xMargin = 10;
+
+    /**
+     * The order of the features.
+     * @type {[Feature]}
+     */
+    static featureOrder = [];
+
+    /**
+     * The rules that might be shown
+     * @type {Rules}
+     */
+    static rules = null;
+
+
+    /**
+     * Store the color of each outcome value
+     * @type {Map<String, String>}
+     */
+    static outcomeColors = new Map();
+
+    /**
+     * Possible colors that we can use for the outcome value.
+     * @type {{orange: string, red: string, pink: string, green: string, gray: string, blue: string, olive: string, purple: string, brown: string, cyan: string}}
+     */
+    static possibleColors = {
+        blue: "#1F77B4",
+        orange: "#FF7F0E",
+        green: "#2CA02C",
+        red: "#D62728",
+        purple: "#9467BD",
+        brown: "#8C564B",
+        pink: "#E377C2",
+        gray: "#7F7F7F",
+        olive: "#BCBD22",
+        cyan: "#17BECF"
+    }
+
+    static attributeColumnHeight = 40;
+
     constructor(p) {
         this._p = null;
         this.p = p;
@@ -492,18 +544,30 @@ class RulesView {
             canvas.position(self.p.windowWidth * controlViewWidth, 0);
 
             self.drawBorder();
+            self.p.rectMode(self.p.CENTER);
         }
     }
 
     get draw() {
         let self = this;
         return function () {
-            if (self.p.mouseIsPressed) {
-                self.p.stroke('purple');
-                let x = self.p.mouseX;
-                let y = self.p.mouseY;
-                self.p.point(x, y, 10);
+
+            // Don't draw anything if we have no features.
+            if (RulesView.featureOrder.length === 0) {
+                return;
             }
+
+            // Draw attribute labels.
+            self.drawFeatureLabels();
+
+            // Stop drawing if there are no rules.
+            if (RulesView.rules == null) {
+                return;
+            }
+
+            // We can draw the rules now.
+            self.drawRules();
+
         }
     }
 
@@ -527,6 +591,135 @@ class RulesView {
         this._p = original;
         this._p.draw = this.draw;
         this._p.setup = this.setup;
+    }
+
+    /**
+     * This method draws the columns for the attributes.
+     */
+    drawFeatureLabels() {
+        // Determine the width of a column
+        let widthPerLabel = (this.p.width - 2 * this.xMargin) / RulesView.featureOrder.length;
+        // Set a fixed height for the columns
+        let heightPerLabel = RulesView.attributeColumnHeight;
+
+        let index = 0;
+
+        // Create new temporary style
+        this.p.push();
+
+        this.p.stroke(0);
+        this.p.strokeWeight(0.5);
+        this.p.textAlign(this.p.CENTER, this.p.CENTER);
+        this.p.textSize(25);
+
+        // For all features, draw a box
+        for (let feature of RulesView.featureOrder) {
+            let x = this.xMargin + (widthPerLabel / 2) + (index * widthPerLabel);
+            let y = this.yOffset + heightPerLabel / 2;
+
+            // Draw column for label
+            this.p.rect(x, y, widthPerLabel, heightPerLabel);
+
+            this.p.push();
+            // Only show outcome in bold
+            if (feature.isLabel) {
+                this.p.strokeWeight(1);
+            } else {
+                this.p.strokeWeight(0);
+            }
+
+            // Now draw feature name in the attribute box
+            this.p.text(feature.name, x, y);
+            this.p.pop();
+
+            index++;
+        }
+
+        // Remove temporary style.
+        this.p.pop();
+    }
+
+    /**
+     * Draw the rules according to the filters that are applied.
+     */
+    drawRules() {
+        // Determine the width of a column
+        let columnWidth = (this.p.width - 2 * this.xMargin) / RulesView.featureOrder.length;
+        // Set a fixed height for the columns
+        let columnHeight = (this.p.height - this.yOffset - 2*RulesView.attributeColumnHeight)
+            / RulesView.rules.rules.length;
+
+        // Set the first y to be at the bottom of the first row.
+        let y = this.yOffset + RulesView.attributeColumnHeight + columnHeight;
+
+        // Generate a temp style
+        this.p.push();
+        this.p.stroke(0);
+        this.p.strokeWeight(0.3);
+        this.p.textAlign(this.p.LEFT);
+
+        let ruleIndex = 0;
+
+        // For each rule, draw a row.
+        for (let rule of RulesView.rules.rules) {
+
+            // Calculate the start of the line
+            let xStart = this.xMargin;
+            // And the end of the line
+            let xEnd = this.p.width - this.xMargin;
+
+            // Draw the line
+            this.p.line(xStart, y, xEnd, y);
+            // And then the text
+            this.p.text(ruleIndex, xStart, y);
+
+            // Increase Y so we go down to the next line
+            y += columnHeight;
+            ruleIndex++;
+        }
+
+        console.log(`Showing ${RulesView.rules.rules.length} rules!`)
+
+        // Remove the temp style
+        this.p.pop();
+    }
+
+    /**
+     * Set the order of the features
+     * @param {[Feature]} featureOrder A list of features, ordered in the way they should appear.
+     */
+    static setFeatureOrder(featureOrder) {
+        RulesView.featureOrder = featureOrder;
+
+        RulesView.outcomeColors.clear();
+
+        // Try to assign colors to the outcomes.
+        this.assignColorsToOutcomes();
+    }
+
+    /**
+     * Set the rules that can be shown.
+     * @param {Rules} rules
+     */
+    static setRules(rules) {
+        RulesView.rules = rules;
+    }
+
+    /**
+     * Try to assign unique color to each outcome. It uses the {@link featureOrder} variable to determine the label that has the outcome values.
+     */
+    static assignColorsToOutcomes() {
+        // Find the feature that is the outcome feature
+        let outcomeFeature = RulesView.featureOrder.find(feature => feature.isLabel);
+
+        if (outcomeFeature !== undefined) {
+            let index = 0;
+            // Loop over the feature that has the outcomes and assign a color to each outcome value
+            for (let value of outcomeFeature.values) {
+                RulesView.outcomeColors[value] = Object.keys(RulesView.possibleColors)[index];
+                index++;
+            }
+        }
     }
 }
 

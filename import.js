@@ -726,6 +726,10 @@ class Rules {
      * Stores a ordered decision list
      */
     constructor() {
+        /**
+         * List of {@link Rule} objects
+         * @type {[Rule]}
+         */
         this.rules = [];
     }
 
