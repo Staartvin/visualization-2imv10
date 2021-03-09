@@ -256,10 +256,10 @@ class Data {
                 }
             }
             if (isOutcome){ //no condition has been found, so this must be the outcome node
-                let already_existing_node = this.getNode(rule, this.metadata.getFeature("label"), rule.label);
-                if (already_existing_node != null & rule.isDefault()){
-                    return already_existing_node; //this outcome node already exists, so return this one
-                }
+                // let already_existing_node = this.getNode(rule, this.metadata.getFeature("label"), rule.label);
+                // if (already_existing_node != null & rule.isDefault()){
+                //     return already_existing_node; //this outcome node already exists, so return this one
+                // }
                 //outcome does not exist, so we create one
                 let node =  new Node(this.DAG.getNodes().length, rule, this.metadata.getFeature("label"), rule.label, null, null);
                 this.DAG.addNode(node);
