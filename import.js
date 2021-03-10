@@ -869,12 +869,7 @@ class Rule {
         support = ((index_arr_supp.length*100) / all_data.length);
         confidence = ((index_arr_conf.length*100) / index_arr_supp.length)
 
-        return [support, confidence]
-    ;
+        return [support, confidence];
     }
 
 }
-
-
-
-

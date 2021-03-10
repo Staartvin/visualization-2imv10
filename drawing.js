@@ -657,7 +657,7 @@ class RulesView {
     /**
      * Draw the rules according to the filters that are applied.
      */
-    drawRules(support_lim = 1, confidence_lim = 0) {
+    drawRules(support_lim = 0, confidence_lim = 0) {
         let offset = 1
         // Determine the width of a column
         let columnWidth = (this.p.width - 2 * this.xMargin) / (RulesView.featureOrder.length + 0.5); //leave room for incoming edge
@@ -674,13 +674,19 @@ class RulesView {
         this.p.textSize(Math.min(15, columnHeight*3/5));
 
         let ruleIndex = 0;
+        var filtered_rules = RulesView.rules.rules;
 
         if( support_lim != 0 || confidence_lim != 0){
-            RulesView.filterRulesBySupport();
+            if(support_lim != 0){
+                filtered_rules = RulesView.filterRulesByVal(filtered_rules,{ support: support_lim});
+            }
+            if(confidence_lim != 0){
+                filtered_rules = RulesView.filterRulesByVal(filtered_rules,{ confidence: confidence_lim});
+            }
         }
 
         // For each rule, draw a row.
-        for (let rule of RulesView.rules.rules) {
+        for (let rule of filtered_rules) {
             // only draw top 30 rules
             if (ruleIndex > 29){
                 break;
@@ -822,14 +828,14 @@ class RulesView {
             }
         }
     }
-    static filterRulesBySupport() {
-        let all_rules = RulesView.rules.rules;
-        //TODO
+    static filterRulesByVal(rules_to_filter, criteria) {
+            return rules_to_filter.filter(function(obj) {
+                return Object.keys(criteria).every(function(c) {
+                    return obj[c] >= criteria[c];
+                });
+            });
     }
 
-    static filterRulesByConfidence() {
-        //TODO
-    }
 }
 
 class ControlView {
