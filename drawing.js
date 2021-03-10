@@ -824,6 +824,8 @@ class ControlView {
     constructor(p) {
         this._p = null;
         this.p = p;
+        this.slider_support = null;
+        this.slider_confidence = null;
     }
 
     get setup() {
@@ -836,13 +838,22 @@ class ControlView {
             canvas.position(0, 0);
 
             self.drawBorder();
+
+            // Generate a temp style for this view
+            self.p.push();
+            self.p.textAlign(self.p.LEFT, self.p.BOTTOM);
+            self.p.textSize(15);
+
+            self.setupSliders();
+
+            self.p.pop();
         }
     }
 
     get draw() {
         let self = this;
         return function () {
-
+            self.drawSliders();
         }
     }
 
@@ -856,6 +867,25 @@ class ControlView {
         this.p.textSize(32);
         this.p.textAlign(this.p.CENTER);
         this.p.text("Control view", this.p.width / 2, 30);
+    }
+
+    setupSliders() {
+        this.slider_support = this.p.createSlider(0, 255, 100);
+        this.slider_confidence = this.p.createSlider(0, 255, 100);
+
+        this.slider_support.position( 20,  50);
+        this.slider_confidence.position( 20, 120);
+        this.p.text('Support', this.slider_support.x * 2 + this.slider_support.width, this.slider_support.y + this.slider_support.height);
+        this.p.text('Confidence', this.slider_confidence.x * 2 + this.slider_confidence.width, this.slider_confidence.y  + this.slider_support.height);
+
+        this.drawSliders();
+
+    }
+
+    drawSliders(){
+        const support = this.slider_support.value();
+        const confidence = this.slider_confidence.value();
+        //this.p.background(support, confidence, 0);
     }
 
     get p() {
