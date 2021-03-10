@@ -657,7 +657,7 @@ class RulesView {
     /**
      * Draw the rules according to the filters that are applied.
      */
-    drawRules() {
+    drawRules(support_lim = 1, confidence_lim = 0) {
         let offset = 1
         // Determine the width of a column
         let columnWidth = (this.p.width - 2 * this.xMargin) / (RulesView.featureOrder.length + 0.5); //leave room for incoming edge
@@ -674,6 +674,10 @@ class RulesView {
         this.p.textSize(Math.min(15, columnHeight*3/5));
 
         let ruleIndex = 0;
+
+        if( support_lim != 0 || confidence_lim != 0){
+            RulesView.filterRulesBySupport();
+        }
 
         // For each rule, draw a row.
         for (let rule of RulesView.rules.rules) {
@@ -818,6 +822,14 @@ class RulesView {
             }
         }
     }
+    static filterRulesBySupport() {
+        let all_rules = RulesView.rules.rules;
+        //TODO
+    }
+
+    static filterRulesByConfidence() {
+        //TODO
+    }
 }
 
 class ControlView {
@@ -853,7 +865,8 @@ class ControlView {
     get draw() {
         let self = this;
         return function () {
-            self.drawSliders();
+            let [support, confidence] = self.drawSliders();
+
         }
     }
 
@@ -873,6 +886,8 @@ class ControlView {
         this.slider_support = this.p.createSlider(0, 255, 100);
         this.slider_confidence = this.p.createSlider(0, 255, 100);
 
+
+        //TODO
         this.slider_support.position( 20,  50);
         this.slider_confidence.position( 20, 120);
         this.p.text('Support', this.slider_support.x * 2 + this.slider_support.width, this.slider_support.y + this.slider_support.height);
@@ -886,6 +901,7 @@ class ControlView {
         const support = this.slider_support.value();
         const confidence = this.slider_confidence.value();
         //this.p.background(support, confidence, 0);
+        return [support, confidence];
     }
 
     get p() {
