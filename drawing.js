@@ -831,7 +831,7 @@ class RulesView {
                 return Object.keys(criteria).every(function(c) {
                     return obj[c] >= criteria[c];
                 });
-            });zz
+            });
 
 
     static fillClickedFeatures(){
