@@ -1048,7 +1048,6 @@ class FilterView {
 
             // Generate a temp style for this view
             self.p.push();
-            self.p.textAlign(self.p.LEFT, self.p.BOTTOM);
             self.p.textSize(15);
 
             self.setupSliders(canvas.x, canvas.y);
@@ -1088,8 +1087,8 @@ class FilterView {
 
         this.slider_support.position( canvas_x + 20,  canvas_y + 50);
         this.slider_confidence.position( canvas_x + 20, canvas_y + 100 );
-        this.p.text('Support', this.slider_support.x + this.slider_support.width,  this.slider_support.y );
-        this.p.text('Confidence',  this.slider_confidence.x + this.slider_confidence.width,  this.slider_confidence.y );
+        this.p.text('Support',   this.slider_support.width + this.slider_support.width/2,   this.slider_support.y + this.slider_support.height );
+        this.p.text('Confidence',    this.slider_confidence.width + this.slider_confidence.width/2,   this.slider_confidence.y + this.slider_confidence.height);
 
         this.drawSliders();
 
