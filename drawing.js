@@ -492,6 +492,12 @@ class RulesView {
     xMargin = 10;
 
     /**
+     * Keep track of which attrributes are clicked.
+     * @type {Map<Feature, Boolean>}
+     */
+    static clickedFeatures = new Map();
+
+    /**
      * The order of the features.
      * @type {[Feature]}
      */
@@ -528,6 +534,7 @@ class RulesView {
     }
 
     static attributeColumnHeight = 40;
+    static attributeColumnWidth = 40
 
     constructor(p) {
         this._p = null;
@@ -551,6 +558,18 @@ class RulesView {
     get draw() {
         let self = this;
         return function () {
+            //have hand on clickable items
+            // feature are clickable
+            if (self.p.mouseY < self.yOffset + RulesView.attributeColumnHeight && self.p.mouseY > self.yOffset){
+                let index_feature = Math.floor((self.p.mouseX-self.xMargin)/RulesView.attributeColumnWidth);
+                if (index_feature > 0 && index_feature < RulesView.featureOrder.length){
+                    self.p.cursor('hand');
+                }else{
+                    self.p.cursor('default');
+                }
+            } else {
+                self.p.cursor('default');
+            }
 
             self.p.background(255);
 
@@ -575,6 +594,23 @@ class RulesView {
         }
     }
 
+    get mouse_clicked(){
+        let self = this;
+        return function(){
+            if (self.p.mouseY < self.yOffset + RulesView.attributeColumnHeight && self.p.mouseY > self.yOffset){
+                console.log(self.p.mouseY);
+
+                let index_feature = Math.floor((self.p.mouseX-self.xMargin)/RulesView.attributeColumnWidth);
+                if (index_feature > 0 && index_feature < RulesView.featureOrder.length){
+                    let feature = RulesView.featureOrder[index_feature-1];
+                    let clicked = RulesView.clickedFeatures.get(feature);
+                    RulesView.clickedFeatures.set(feature, !clicked);
+                }
+            }
+
+        }
+    }
+
     drawBorder() {
         this.p.stroke("#FFC114");
         this.p.strokeWeight(4);
@@ -595,6 +631,7 @@ class RulesView {
         this._p = original;
         this._p.draw = this.draw;
         this._p.setup = this.setup;
+        this._p.mouseClicked=this.mouse_clicked;
     }
 
     /**
@@ -623,6 +660,7 @@ class RulesView {
             if (feature.name === "label"){ //do not draw the label
                 continue;
             }
+
             if (index > 0){ // do not draw first line
                 let x = this.xMargin + ((index+offset) * widthPerLabel); //set off by one for incoming edge
                 let y = this.yOffset;
@@ -633,15 +671,21 @@ class RulesView {
             }
 
             this.p.push();
-            // Only show outcome in bold
-            if (feature.isLabel) {
-                this.p.strokeWeight(1);
-            } else {
-                this.p.strokeWeight(0);
-            }
 
-            let x = this.xMargin + ((index+offset) * widthPerLabel) + widthPerLabel/2; //set off by one for incoming edge
+            let x = this.xMargin + ((index+offset) * widthPerLabel) + 10; //set off by one for incoming edge
             let y = this.yOffset + heightPerLabel/2;
+
+
+            //show icon to indicate attribute is selected
+            if (RulesView.clickedFeatures.get(feature)){
+                this.p.stroke(0, 92, 71);
+                this.p.strokeWeight(2);
+                this.p.fill(255);
+                this.p.triangle(x-5, y-5, x+5, y-5, x, y+5);
+            }
+            this.p.strokeWeight(0);
+            this.p.fill(0);
+            x = this.xMargin + ((index+offset) * widthPerLabel) + widthPerLabel/2; //set off by one for incoming edge
 
             // Now draw feature name in the attribute box
             this.p.text(feature.name, x, y);
@@ -658,9 +702,10 @@ class RulesView {
      * Draw the rules according to the filters that are applied.
      */
     drawRules() {
-        let offset = 1
+        let offset = 1;
         // Determine the width of a column
         let columnWidth = (this.p.width - 2 * this.xMargin) / (RulesView.featureOrder.length + 0.5); //leave room for incoming edge
+        RulesView.attributeColumnWidth = columnWidth;
         // Set a fixed height for the columns
         let columnHeight = (this.p.height - 2*this.yOffset - RulesView.attributeColumnHeight)
             / Math.min(RulesView.rules.rules.length, 30);
@@ -674,6 +719,30 @@ class RulesView {
         this.p.textSize(Math.min(15, columnHeight*3/5));
 
         let ruleIndex = 0;
+        let number_of_not_shown_rules = 0;
+        // For each rule, draw a row.
+        loop1:
+            for (let rule of RulesView.rules.rules) {
+                let tp = rule.truePositives;
+                let fp = rule.falsePositives;
+                let ratio = tp/(tp+fp);
+                //check if we should draw rule according to mouse clicks
+                for (let [feature, clicked] of RulesView.clickedFeatures.entries()){
+                    if (clicked){
+                        if (!rule.conditions.has(feature)){
+                            let x = this.xMargin + columnWidth + number_of_not_shown_rules*15;
+                            let color = this.p.color(RulesView.outcomeColors.get(rule.label));
+                            color.setAlpha(100);
+                            this.p.fill(color);
+
+                            this.p.strokeWeight(0);
+                            number_of_not_shown_rules += 1;
+                            this.p.circle(x, y, 10); //draw circle for decision node
+                            continue loop1; //continue to the next rule
+                        }
+                    }
+                }
+              
         var filtered_rules = RulesView.rules.rules;
         let support_lim = FilterView.support_val;
         let confidence_lim = FilterView.conf_val;
@@ -717,62 +786,133 @@ class RulesView {
                 this.p.text(value, x+5, y-2 ); //draw the text
             }
 
-            //Draw the incoming cases
-            let tempX = this.xMargin; //set start value of X for incoming case distribution
-            let totalWidth = .95*columnWidth; // this is the space we have
-            let remainingWidth = 1; // keep track of percentage of data not satisfied by rules
-            for (const [label, color] of RulesView.outcomeColors.entries()){
-                let percentageWidth=0;
-                if (label === rule.label){ //are true positives
-                    percentageWidth = rule.truePositives/RulesView.determineNumberOfCases(); //Determine percentage TODO for multiple labels
-                } else{
-                    percentageWidth = rule.falsePositives/RulesView.determineNumberOfCases(); //TODO for multiple labels
+                // only draw top 30 rules
+                if (ruleIndex > 29){
+                    let x = this.xMargin + columnWidth + number_of_not_shown_rules*15;
+                    let color = this.p.color(RulesView.outcomeColors.get(rule.label));
+
+                    color.setAlpha(100);
+                    this.p.fill(color);
+
+                    this.p.strokeWeight(0);
+                    number_of_not_shown_rules += 1;
+                    this.p.circle(x, y, 10); //draw circle for decision node
+                    continue; //continue to the next rule
                 }
-                this.p.fill(color);  //set the fill of the label
-                this.p.rect(tempX + (percentageWidth*totalWidth)/2 , y, percentageWidth*totalWidth, columnHeight*.8); // draw rectangle
-                tempX += percentageWidth*totalWidth; //determine new locations
-                remainingWidth -= percentageWidth;
+
+                if (number_of_not_shown_rules > 0){
+                    number_of_not_shown_rules = 0;
+                    y += columnHeight;
+                }
+
+                // Calculate the start of the line
+                let xStart = this.xMargin + .4*columnWidth;
+                // And the end of the line
+                let xEnd = this.p.width - this.xMargin - 1/4*columnWidth;
+
+                //set the color of the line according to the label
+                this.p.stroke(RulesView.outcomeColors.get(rule.label));
+
+                // Draw the line
+                this.p.strokeWeight(1);
+                this.p.line(xStart, y, xEnd, y);
+
+                // Draw values of conditions
+                for (let [feature, value] of rule.conditions.entries()) {
+                    this.p.strokeWeight(0); // we want no stroke on the text or circle
+                    let featureIndex = RulesView.featureOrder.indexOf(feature); //get location of feature
+
+                    let x = this.xMargin + (featureIndex+offset)*columnWidth + columnWidth/10; //set off by a half (since incoming edge)
+                    this.p.fill(RulesView.outcomeColors.get(rule.label)); //set fill color of circle
+                    this.p.circle(x, y, 10); //draw circle for decision node
+                    this.p.fill(50); // set text color
+                    this.p.text(value, x+5, y-2 ); //draw the text
+                }
+
+                //Draw the incoming cases
+                let tempX = this.xMargin; //set start value of X for incoming case distribution
+                let totalWidth = .95*columnWidth; // this is the space we have
+                let remainingWidth = 1; // keep track of percentage of data not satisfied by rules
+                for (const [label, color] of RulesView.outcomeColors.entries()){
+                    let percentageWidth=0;
+                    if (label === rule.label){ //are true positives
+                        percentageWidth = rule.truePositives/RulesView.determineNumberOfCases(); //Determine percentage TODO for multiple labels
+                    } else{
+                        percentageWidth = rule.falsePositives/RulesView.determineNumberOfCases(); //TODO for multiple labels
+                    }
+                    this.p.fill(color);  //set the fill of the label
+                    this.p.rect(tempX + (percentageWidth*totalWidth)/2 , y, percentageWidth*totalWidth, columnHeight*.8); // draw rectangle
+                    tempX += percentageWidth*totalWidth; //determine new locations
+                    remainingWidth -= percentageWidth;
+                }
+
+                //draw rectangle for non-satisfied data
+                this.p.fill(230);
+                this.p.rect(tempX + (remainingWidth*totalWidth)/2, y, remainingWidth*totalWidth, columnHeight*.8);
+
+                // draw small rectangle on the left to indicate start of rule
+                let x = this.xMargin + .95*columnWidth;
+                this.p.strokeWeight(1);
+                this.p.stroke(150);
+                this.p.fill(255);
+                this.p.rect(x, y, 5, columnHeight/2 + 5, 2);
+
+                // Draw the outcome label
+                let featureIndex = RulesView.featureOrder.length - 1;
+                x = this.xMargin + (featureIndex+offset)*columnWidth + columnWidth/4; //set off by .5
+                let height = 0.8*columnHeight;
+                let width = 0.8*columnWidth/2;
+                // for squircles, we need to draw the background first with the smallest area (determined by ratio)
+                if (ratio > 0.5){
+                    this.p.fill(255); // set fill color of rectangle //draw false positives
+                } else {
+                    this.p.fill(RulesView.outcomeColors.get(rule.label)); // set fill color true positives // true postives
+                }
+                this.p.stroke(RulesView.outcomeColors.get(rule.label)); //set stroke color of rectangle
+                this.p.strokeWeight(1); //make sure stroke is drawn
+                this.p.rect(x, y, width, height, 20);
+
+                // draw true positives
+                this.p.push();
+                this.p.rectMode(this.p.CORNER);
+
+                // draw correct squircles and right line to the right side
+                // for squircles, we draw the foreground with the largest area (determined by ratio)
+                if (ratio > 0.5){
+                    let tempX = x - width/2; //set x to correct x for CORNER
+                    let tempWidth = width * tp/(tp+fp); //find relative part of width
+                    let tempY = y - height/2;
+                    this.p.fill(RulesView.outcomeColors.get(rule.label));
+                    if (ratio < .85){
+                        this.p.rect(tempX, tempY, tempWidth, height, 20, 0, 0, 20);
+                    } else if (ratio < 0.90){
+                        this.p.rect(tempX, tempY, tempWidth, height, 20, 5, 5, 20);
+                    } else if (ratio < .95){
+                        this.p.rect(tempX, tempY, tempWidth, height, 20, 10, 10, 20);
+                    } else {
+                        this.p.rect(tempX, tempY, tempWidth, height, 20);
+                    }
+                } else { // draw negatives (due to squircles)
+                    let tempX = x - width/2 + width * tp/(tp+fp); //set x to correct x for CORNER
+                    let tempWidth = width * (1-tp/(tp+fp)); //find relative part of width
+                    let tempY = y - height/2;
+                    this.p.fill(255);
+                    if (ratio > .15){
+                        this.p.rect(tempX, tempY, tempWidth, height, 0, 20, 20, 0);
+                    } else if (ratio > .10){
+                        this.p.rect(tempX, tempY, tempWidth, height, 5, 20, 20, 5);
+                    } else if (ratio > .05){
+                        this.p.rect(tempX, tempY, tempWidth, height, 10, 20, 20, 10);
+                    } else {
+                        this.p.rect(tempX, tempY, tempWidth, height, 20);
+                    }
+                }
+                this.p.pop();
+
+                // Increase Y so we go down to the next line
+                y += columnHeight;
+                ruleIndex++;
             }
-
-            //draw rectangle for non-satisfied data
-            this.p.fill(230);
-            this.p.rect(tempX + (remainingWidth*totalWidth)/2, y, remainingWidth*totalWidth, columnHeight*.8);
-
-            // draw small rectangle on the left to indicate start of rule
-            let x = this.xMargin + .95*columnWidth;
-            this.p.strokeWeight(1);
-            this.p.stroke(150);
-            this.p.fill(255);
-            this.p.rect(x, y, 5, columnHeight/2 + 5, 2);
-
-            // Draw the outcome label
-            let featureIndex = RulesView.featureOrder.length - 1;
-            x = this.xMargin + (featureIndex+offset)*columnWidth + columnWidth/4; //set off by .5
-            let height = 0.8*columnHeight;
-            let width = 0.8*columnWidth/2;
-            this.p.fill(255); // set fill color of rectangle
-            this.p.stroke(RulesView.outcomeColors.get(rule.label)); //set stroke color of rectangle
-            this.p.strokeWeight(1); //make sure stroke is drawn
-            this.p.rect(x, y, width, height, 20);
-
-            // draw true positives
-            this.p.push();
-            this.p.rectMode(this.p.CORNER);
-            let tp = rule.truePositives;
-            let fp = rule.falsePositives;
-            if (tp/(tp+fp) > 0){
-                let tempX = x - width/2; //set x to correct x for CORNER
-                let tempWidth = width * tp/(tp+fp); //find relative part of width
-                let tempY = y - height/2;
-                this.p.fill(RulesView.outcomeColors.get(rule.label));
-                this.p.rect(tempX, tempY, tempWidth, height, 20, 0, 0, 20);
-            }
-            this.p.pop();
-
-            // Increase Y so we go down to the next line
-            y += columnHeight;
-            ruleIndex++;
-        }
 
         console.log(`Showing ${RulesView.rules.rules.length} rules!`)
 
@@ -791,7 +931,10 @@ class RulesView {
 
         // Try to assign colors to the outcomes.
         this.assignColorsToOutcomes();
+
+        this.fillClickedFeatures();
     }
+
 
     /**
      * Set the rules that can be shown.
@@ -835,15 +978,22 @@ class RulesView {
             }
         }
     }
+      
     static filterRulesByVal(rules_to_filter, criteria) {
             return rules_to_filter.filter(function(obj) {
                 return Object.keys(criteria).every(function(c) {
                     return obj[c] >= criteria[c];
                 });
             });
+
+    static fillClickedFeatures(){
+        for (let feature of RulesView.featureOrder){
+            RulesView.clickedFeatures.set(feature, false);
+        }
     }
 
 }
+
 
 class ControlView {
 
