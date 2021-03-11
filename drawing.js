@@ -958,11 +958,6 @@ class RulesView {
         });
     }
 
-    static updateRulesView(){
-        //TODO
-        this.drawRules();
-    }
-
 }
 
 
@@ -1059,13 +1054,7 @@ class FilterView {
     get draw() {
         let self = this;
         return function () {
-            let [support, confidence] = self.drawSliders();
-
-            if(support != FilterView.support_val || confidence != FilterView.conf_val ){
-                FilterView.support_val = support;
-                FilterView.conf_val = confidence;
-                RulesView.updateRulesView();
-            }
+            self.sliderOnChange();
         }
     }
 
@@ -1090,14 +1079,17 @@ class FilterView {
         this.p.text('Support',   this.slider_support.width + this.slider_support.width/2,   this.slider_support.y + this.slider_support.height );
         this.p.text('Confidence',    this.slider_confidence.width + this.slider_confidence.width/2,   this.slider_confidence.y + this.slider_confidence.height);
 
-        this.drawSliders();
+
+        this.slider_support.input(this.sliderOnChange);
+        this.slider_confidence.input(this.sliderOnChange);
 
     }
 
-    drawSliders(){
+    sliderOnChange(){
         let support = this.slider_support.value();
         let confidence = this.slider_confidence.value();
-        return [support, confidence];
+        FilterView.support_val = support;
+        FilterView.conf_val = confidence;
     }
 
     get p() {
