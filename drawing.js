@@ -1054,7 +1054,8 @@ class FilterView {
     get draw() {
         let self = this;
         return function () {
-            self.sliderOnChange();
+            self.supportSliderOnChange();
+            self.confSliderOnChange();
         }
     }
 
@@ -1080,16 +1081,17 @@ class FilterView {
         this.p.text('Confidence',    this.slider_confidence.width + this.slider_confidence.width/2,   this.slider_confidence.y + this.slider_confidence.height);
 
 
-        this.slider_support.input(this.sliderOnChange);
-        this.slider_confidence.input(this.sliderOnChange);
+        this.slider_support.input(this.supportSliderOnChange);
+        this.slider_confidence.input(this.confSliderOnChange);
 
     }
 
-    sliderOnChange(){
-        let support = this.slider_support.value();
-        let confidence = this.slider_confidence.value();
-        FilterView.support_val = support;
-        FilterView.conf_val = confidence;
+    supportSliderOnChange(){
+        FilterView.support_val = this.slider_support.value();
+    }
+
+    confSliderOnChange(){
+        FilterView.conf_val = this.slider_confidence.value();
     }
 
     get p() {
