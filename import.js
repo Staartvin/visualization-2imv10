@@ -118,10 +118,6 @@ class Data {
                                     reject(e);
                                 }
                             }
-                            let [support, conf] = rule.getRuleSupportAndConf(all_data.full_data);
-                            rule.support = support;
-                            rule.confidence = conf;
-
                             that.rules.addRule(rule)
                         } else {
                             // remove else and all spaces at start and end
@@ -347,8 +343,6 @@ class Data {
         // Return this feature ordering.
         return featureOrder;
     }
-
-
 }
 
 class DAG {
@@ -764,15 +758,10 @@ class Rule {
      * @param {string} label The value of the outcome
      * @param {number} truePositives True positives found for this rule
      * @param {number} falsePositives False positives found for this rule
-     * @param {number} support Support of a rule, i.e. percentage of instances to which the condition of the rule applies
-     * @param {number} confidence Confidence of a rule, i.e. how accurate the rule is in predicting the correct class
-     * for the instances to which the condition of the rule applies
      */
-    constructor(labelFeature, label, truePositives = 0, falsePositives = 0, support = 0, confidence = 0) {
+    constructor(labelFeature, label, truePositives = 0, falsePositives = 0) {
         this.truePositives = truePositives;
         this.falsePositives = falsePositives;
-        this.support = support;
-        this.confidence = confidence;
         this.conditions = new Map(); //conditions are stored as (feature, value)
         if (!labelFeature.values.has(label)) { //check if value of label actually exists
             throw new Error(`Label \'${label}\' does not occur in the label set`);
@@ -832,58 +821,8 @@ class Rule {
         }
         return true //all conditions are satisfied by the rule
     }
-
-    /**
-     * Function that computes the support of a rule.
-     * Returns the support value of a rule.
-     * @param {Data} all_data all data in the dataset
-     * @returns {number} support Support value of the rule
-     */
-    getRuleSupportAndConf(all_data) {
-        let support = 0;
-        let confidence = 0;
-        let index_arr_supp = [];
-        let index_arr_conf = [];
-        let val_ind = 0;
-
-
-        for (let [feature, value] of this.conditions.entries()) {
-
-            if (index_arr_supp.length == 0 && val_ind == 0) {
-                index_arr_supp = all_data.map((e, i) => e[feature.name] === value ? i : '').filter(String);
-                index_arr_conf = all_data.map((e, i) => (e[feature.name] === value && e["label"] === this.label) ? i : '').filter(String);
-                val_ind +=1;
-                continue;
-            } else if (index_arr_supp.length == 0 && val_ind != 0) {
-                break;
-            }
-            let curr_ind_arr_supp = all_data.map((e, i) => e[feature.name] === value ? i : '').filter(String);
-            let curr_ind_arr_conf = all_data.map((e, i) => ( e[feature.name] === value && e["label"] === this.label) ? i : '').filter(String);
-
-            index_arr_supp = index_arr_supp.filter(value => curr_ind_arr_supp.includes(value));
-            index_arr_conf = index_arr_conf.filter(value => curr_ind_arr_conf.includes(value));
-
-            val_ind += 1;
-        }
-
-        support = ((index_arr_supp.length*100) / all_data.length);
-        confidence = ((index_arr_conf.length*100) / index_arr_supp.length)
-
-        return [support, confidence];
-    }
-
-    // /**
-    //  * Function to filter data by a specific attribute sample
-    //  * Returns filtered number of true_positives and false positives.
-    //  * @param {Data} all_data all_data under consideration
-    //  * @returns {{number}} true_positives, false positives as the filtered values
-    //  */
-    // setAttributeValue(all_data, criteria) {
-    //     return (all_data.filter(function(obj) {
-    //         return Object.keys(criteria).every(function(c) {
-    //             return obj[c] == criteria[c];
-    //         });
-    //     }));
-    //
-    // }
 }
+
+
+
+
