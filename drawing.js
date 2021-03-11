@@ -687,35 +687,30 @@ class RulesView {
             }
         }
 
+        let number_of_not_shown_rules = 0;
         // For each rule, draw a row.
-        for (let rule of filtered_rules) {
-            // only draw top 30 rules
-            if (ruleIndex > 29){
-                break;
-            }
-            // Calculate the start of the line
-            let xStart = this.xMargin + .4*columnWidth;
-            // And the end of the line
-            let xEnd = this.p.width - this.xMargin - 1/4*columnWidth;
+        loop1:
+            for (let rule of filtered_rules) {
+                let tp = rule.truePositives;
+                let fp = rule.falsePositives;
+                let ratio = tp/(tp+fp);
+                //check if we should draw rule according to mouse clicks
+                for (let [feature, clicked] of RulesView.clickedFeatures.entries()){
+                    if (clicked){
+                        if (!rule.conditions.has(feature)){
+                            let x = this.xMargin + columnWidth + number_of_not_shown_rules*15;
+                            let color = this.p.color(RulesView.outcomeColors.get(rule.label));
+                            color.setAlpha(100);
+                            this.p.fill(color);
 
-            //set the color of the line according to the label
-            this.p.stroke(RulesView.outcomeColors.get(rule.label));
+                            this.p.strokeWeight(0);
+                            number_of_not_shown_rules += 1;
+                            this.p.circle(x, y, 10); //draw circle for decision node
+                            continue loop1; //continue to the next rule
+                        }
+                    }
+                }
 
-            // Draw the line
-            this.p.strokeWeight(1);
-            this.p.line(xStart, y, xEnd, y);
-
-            // Draw values of conditions
-            for (let [feature, value] of rule.conditions.entries()) {
-                this.p.strokeWeight(0); // we want no stroke on the text or circle
-                let featureIndex = RulesView.featureOrder.indexOf(feature); //get location of feature
-
-                let x = this.xMargin + (featureIndex+offset)*columnWidth + columnWidth/10; //set off by a half (since incoming edge)
-                this.p.fill(RulesView.outcomeColors.get(rule.label)); //set fill color of circle
-                this.p.circle(x, y, 10); //draw circle for decision node
-                this.p.fill(50); // set text color
-                this.p.text(value, x+5, y-2 ); //draw the text
-            }
 
             //Draw the incoming cases
             let tempX = this.xMargin; //set start value of X for incoming case distribution
@@ -814,11 +809,6 @@ class RulesView {
         return sum;
     }
 
-    static updateRulesView(){
-        //TODO
-        this.drawRules();
-    }
-
     /**
      * Try to assign unique color to each outcome. It uses the {@link featureOrder} variable to determine the label that has the outcome values.
      */
@@ -835,12 +825,19 @@ class RulesView {
             }
         }
     }
+
     static filterRulesByVal(rules_to_filter, criteria) {
             return rules_to_filter.filter(function(obj) {
                 return Object.keys(criteria).every(function(c) {
                     return obj[c] >= criteria[c];
                 });
             });
+
+
+    static fillClickedFeatures(){
+        for (let feature of RulesView.featureOrder){
+            RulesView.clickedFeatures.set(feature, false);
+        }
     }
 
 }
@@ -852,7 +849,6 @@ class ControlView {
     constructor(p) {
         this._p = null;
         this.p = p;
-
     }
 
     get setup() {
@@ -865,7 +861,6 @@ class ControlView {
             canvas.position(0, 0);
 
             self.drawBorder();
-
         }
     }
 
@@ -888,15 +883,6 @@ class ControlView {
         this.p.text("Control view", this.p.width / 2, 30);
     }
 
-    changeBg(){
-        return true;
-    }
-
-
-    static setFeatures(features){
-        ControlView.features = features;
-    }
-
     get p() {
         return this._p;
     }
@@ -909,15 +895,9 @@ class ControlView {
 }
 
 class FilterView {
-
-    static support_val = 0;
-    static conf_val = 0;
-
     constructor(p) {
         this._p = null;
         this.p = p;
-        this.slider_support = null;
-        this.slider_confidence = null;
     }
 
     get setup() {
@@ -928,29 +908,14 @@ class FilterView {
             let canvas = self.p.createCanvas(self.p.windowWidth * filterViewWidth, self.p.windowHeight / 2);
             canvas.background(255);
             canvas.position((controlViewWidth + rulesViewWidth) * self.p.windowWidth, 0);
+
             self.drawBorder();
-
-            // Generate a temp style for this view
-            self.p.push();
-            self.p.textAlign(self.p.LEFT, self.p.BOTTOM);
-            self.p.textSize(15);
-
-            self.setupSliders(canvas.x, canvas.y);
-
-            self.p.pop();
         }
     }
 
     get draw() {
         let self = this;
         return function () {
-            let [support, confidence] = self.drawSliders();
-
-            if(support != FilterView.support_val || confidence != FilterView.conf_val ){
-                FilterView.support_val = support;
-                FilterView.conf_val = confidence;
-                RulesView.updateRulesView();
-            }
 
         }
     }
@@ -966,26 +931,6 @@ class FilterView {
         this.p.textAlign(this.p.CENTER);
         this.p.text("Filter view", this.p.width / 2, 30);
     }
-
-    setupSliders(canvas_x, canvas_y) {
-        this.slider_support = this.p.createSlider(0, 100, 0);
-        this.slider_confidence = this.p.createSlider(0, 100, 0);
-
-        this.slider_support.position( canvas_x + 20,  canvas_y + 50);
-        this.slider_confidence.position( canvas_x + 20, canvas_y + 100 );
-        this.p.text('Support', this.slider_support.x + this.slider_support.width,  this.slider_support.y );
-        this.p.text('Confidence',  this.slider_confidence.x + this.slider_confidence.width,  this.slider_confidence.y );
-
-        this.drawSliders();
-
-    }
-
-    drawSliders(){
-        let support = this.slider_support.value();
-        let confidence = this.slider_confidence.value();
-        return [support, confidence];
-    }
-
 
     get p() {
         return this._p;
