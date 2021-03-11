@@ -657,7 +657,7 @@ class RulesView {
     /**
      * Draw the rules according to the filters that are applied.
      */
-    drawRules(support_lim = 10, confidence_lim = 0) {
+    drawRules() {
         let offset = 1
         // Determine the width of a column
         let columnWidth = (this.p.width - 2 * this.xMargin) / (RulesView.featureOrder.length + 0.5); //leave room for incoming edge
@@ -675,6 +675,8 @@ class RulesView {
 
         let ruleIndex = 0;
         var filtered_rules = RulesView.rules.rules;
+        let support_lim = FilterView.support_val;
+        let confidence_lim = FilterView.conf_val;
 
         if( support_lim != 0 || confidence_lim != 0){
             if(support_lim != 0){
@@ -812,6 +814,11 @@ class RulesView {
         return sum;
     }
 
+    static updateRulesView(){
+        //TODO
+        this.drawRules();
+    }
+
     /**
      * Try to assign unique color to each outcome. It uses the {@link featureOrder} variable to determine the label that has the outcome values.
      */
@@ -902,13 +909,15 @@ class ControlView {
 }
 
 class FilterView {
+
+    static support_val = 0;
+    static conf_val = 0;
+
     constructor(p) {
         this._p = null;
         this.p = p;
         this.slider_support = null;
         this.slider_confidence = null;
-        this.support_val = 0;
-        this.conf_val = 0;
     }
 
     get setup() {
@@ -936,8 +945,13 @@ class FilterView {
         let self = this;
         return function () {
             let [support, confidence] = self.drawSliders();
-            self.support_val = support;
-            self.conf_val = confidence;
+
+            if(support != FilterView.support_val || confidence != FilterView.conf_val ){
+                FilterView.support_val = support;
+                FilterView.conf_val = confidence;
+                RulesView.updateRulesView();
+            }
+
         }
     }
 
@@ -954,8 +968,8 @@ class FilterView {
     }
 
     setupSliders(canvas_x, canvas_y) {
-        this.slider_support = this.p.createSlider(0, 255, 100);
-        this.slider_confidence = this.p.createSlider(0, 255, 100);
+        this.slider_support = this.p.createSlider(0, 100, 0);
+        this.slider_confidence = this.p.createSlider(0, 100, 0);
 
         this.slider_support.position( canvas_x + 20,  canvas_y + 50);
         this.slider_confidence.position( canvas_x + 20, canvas_y + 100 );
@@ -967,8 +981,8 @@ class FilterView {
     }
 
     drawSliders(){
-        const support = this.slider_support.value();
-        const confidence = this.slider_confidence.value();
+        let support = this.slider_support.value();
+        let confidence = this.slider_confidence.value();
         return [support, confidence];
     }
 
