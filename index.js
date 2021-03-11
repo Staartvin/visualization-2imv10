@@ -13,9 +13,9 @@ all_data.importData()
         // Communicate feature ordering to rules view
         RulesView.setFeatureOrder(all_data.getOrderingOfFeatures());
 
-        // Communicate filter values from view to the rules model
+        // Communicate features to Control View
 
-
+        ControlView.setFeatures(all_data.metadata.features.keys());
 
         // Communicate rules to the rules view.
         RulesView.setRules(all_data.rules);

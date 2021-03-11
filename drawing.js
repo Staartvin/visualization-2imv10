@@ -657,7 +657,7 @@ class RulesView {
     /**
      * Draw the rules according to the filters that are applied.
      */
-    drawRules(support_lim = 0, confidence_lim = 0) {
+    drawRules(support_lim = 10, confidence_lim = 0) {
         let offset = 1
         // Determine the width of a column
         let columnWidth = (this.p.width - 2 * this.xMargin) / (RulesView.featureOrder.length + 0.5); //leave room for incoming edge
@@ -839,11 +839,13 @@ class RulesView {
 }
 
 class ControlView {
+
+    static features = [];
+
     constructor(p) {
         this._p = null;
         this.p = p;
-        this.slider_support = null;
-        this.slider_confidence = null;
+
     }
 
     get setup() {
@@ -857,21 +859,12 @@ class ControlView {
 
             self.drawBorder();
 
-            // Generate a temp style for this view
-            self.p.push();
-            self.p.textAlign(self.p.LEFT, self.p.BOTTOM);
-            self.p.textSize(15);
-
-            self.setupSliders();
-
-            self.p.pop();
         }
     }
 
     get draw() {
         let self = this;
         return function () {
-            let [support, confidence] = self.drawSliders();
 
         }
     }
@@ -888,26 +881,13 @@ class ControlView {
         this.p.text("Control view", this.p.width / 2, 30);
     }
 
-    setupSliders() {
-        this.slider_support = this.p.createSlider(0, 255, 100);
-        this.slider_confidence = this.p.createSlider(0, 255, 100);
-
-
-        //TODO
-        this.slider_support.position( 20,  50);
-        this.slider_confidence.position( 20, 120);
-        this.p.text('Support', this.slider_support.x * 2 + this.slider_support.width, this.slider_support.y + this.slider_support.height);
-        this.p.text('Confidence', this.slider_confidence.x * 2 + this.slider_confidence.width, this.slider_confidence.y  + this.slider_support.height);
-
-        this.drawSliders();
-
+    changeBg(){
+        return true;
     }
 
-    drawSliders(){
-        const support = this.slider_support.value();
-        const confidence = this.slider_confidence.value();
-        //this.p.background(support, confidence, 0);
-        return [support, confidence];
+
+    static setFeatures(features){
+        ControlView.features = features;
     }
 
     get p() {
@@ -925,6 +905,10 @@ class FilterView {
     constructor(p) {
         this._p = null;
         this.p = p;
+        this.slider_support = null;
+        this.slider_confidence = null;
+        this.support_val = 0;
+        this.conf_val = 0;
     }
 
     get setup() {
@@ -935,15 +919,25 @@ class FilterView {
             let canvas = self.p.createCanvas(self.p.windowWidth * filterViewWidth, self.p.windowHeight / 2);
             canvas.background(255);
             canvas.position((controlViewWidth + rulesViewWidth) * self.p.windowWidth, 0);
-
             self.drawBorder();
+
+            // Generate a temp style for this view
+            self.p.push();
+            self.p.textAlign(self.p.LEFT, self.p.BOTTOM);
+            self.p.textSize(15);
+
+            self.setupSliders(canvas.x, canvas.y);
+
+            self.p.pop();
         }
     }
 
     get draw() {
         let self = this;
         return function () {
-
+            let [support, confidence] = self.drawSliders();
+            self.support_val = support;
+            self.conf_val = confidence;
         }
     }
 
@@ -958,6 +952,26 @@ class FilterView {
         this.p.textAlign(this.p.CENTER);
         this.p.text("Filter view", this.p.width / 2, 30);
     }
+
+    setupSliders(canvas_x, canvas_y) {
+        this.slider_support = this.p.createSlider(0, 255, 100);
+        this.slider_confidence = this.p.createSlider(0, 255, 100);
+
+        this.slider_support.position( canvas_x + 20,  canvas_y + 50);
+        this.slider_confidence.position( canvas_x + 20, canvas_y + 100 );
+        this.p.text('Support', this.slider_support.x + this.slider_support.width,  this.slider_support.y );
+        this.p.text('Confidence',  this.slider_confidence.x + this.slider_confidence.width,  this.slider_confidence.y );
+
+        this.drawSliders();
+
+    }
+
+    drawSliders(){
+        const support = this.slider_support.value();
+        const confidence = this.slider_confidence.value();
+        return [support, confidence];
+    }
+
 
     get p() {
         return this._p;

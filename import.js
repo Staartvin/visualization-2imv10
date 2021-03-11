@@ -836,7 +836,7 @@ class Rule {
     /**
      * Function that computes the support of a rule.
      * Returns the support value of a rule.
-     * @param {Rule} rule Rule under consideration
+     * @param {Data} all_data all data in the dataset
      * @returns {number} support Support value of the rule
      */
     getRuleSupportAndConf(all_data) {
@@ -872,4 +872,18 @@ class Rule {
         return [support, confidence];
     }
 
+    // /**
+    //  * Function to filter data by a specific attribute sample
+    //  * Returns filtered number of true_positives and false positives.
+    //  * @param {Data} all_data all_data under consideration
+    //  * @returns {{number}} true_positives, false positives as the filtered values
+    //  */
+    // setAttributeValue(all_data, criteria) {
+    //     return (all_data.filter(function(obj) {
+    //         return Object.keys(criteria).every(function(c) {
+    //             return obj[c] == criteria[c];
+    //         });
+    //     }));
+    //
+    // }
 }
