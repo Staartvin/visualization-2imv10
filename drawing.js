@@ -719,10 +719,23 @@ class RulesView {
         this.p.textSize(Math.min(15, columnHeight*3/5));
 
         let ruleIndex = 0;
+        var filtered_rules = RulesView.rules.rules;
+        let support_lim = FilterView.support_val;
+        let confidence_lim = FilterView.conf_val;
         let number_of_not_shown_rules = 0;
+
+        if( support_lim != 0 || confidence_lim != 0){
+            if(support_lim != 0){
+                filtered_rules = RulesView.filterRulesByVal(filtered_rules,{ support: support_lim});
+            }
+            if(confidence_lim != 0){
+                filtered_rules = RulesView.filterRulesByVal(filtered_rules,{ confidence: confidence_lim});
+            }
+        }
+
         // For each rule, draw a row.
         loop1:
-            for (let rule of RulesView.rules.rules) {
+            for (let rule of filtered_rules) {
                 let tp = rule.truePositives;
                 let fp = rule.falsePositives;
                 let ratio = tp/(tp+fp);
@@ -937,11 +950,27 @@ class RulesView {
         }
     }
 
+    static filterRulesByVal(rules_to_filter, criteria) {
+        return rules_to_filter.filter(function(obj) {
+            return Object.keys(criteria).every(function(c) {
+                return obj[c] >= criteria[c];
+            });
+        });
+    }
+
+    static updateRulesView(){
+        //TODO
+        this.drawRules();
+    }
+
 }
 
 
 
 class ControlView {
+
+    static features = [];
+
     constructor(p) {
         this._p = null;
         this.p = p;
@@ -988,12 +1017,22 @@ class ControlView {
         this._p.draw = this.draw;
         this._p.setup = this.setup;
     }
+
+    static setFeatures(features){
+        ControlView.features = features;
+    }
 }
 
 class FilterView {
+
+    static support_val = 0;
+    static conf_val = 0;
+
     constructor(p) {
         this._p = null;
         this.p = p;
+        this.slider_support = null;
+        this.slider_confidence = null;
     }
 
     get setup() {
@@ -1006,13 +1045,28 @@ class FilterView {
             canvas.position((controlViewWidth + rulesViewWidth) * self.p.windowWidth, 0);
 
             self.drawBorder();
+
+            // Generate a temp style for this view
+            self.p.push();
+            self.p.textAlign(self.p.LEFT, self.p.BOTTOM);
+            self.p.textSize(15);
+
+            self.setupSliders(canvas.x, canvas.y);
+
+            self.p.pop();
         }
     }
 
     get draw() {
         let self = this;
         return function () {
+            let [support, confidence] = self.drawSliders();
 
+            if(support != FilterView.support_val || confidence != FilterView.conf_val ){
+                FilterView.support_val = support;
+                FilterView.conf_val = confidence;
+                RulesView.updateRulesView();
+            }
         }
     }
 
@@ -1026,6 +1080,25 @@ class FilterView {
         this.p.textSize(32);
         this.p.textAlign(this.p.CENTER);
         this.p.text("Filter view", this.p.width / 2, 30);
+    }
+
+    setupSliders(canvas_x, canvas_y) {
+        this.slider_support = this.p.createSlider(0, 100, 0);
+        this.slider_confidence = this.p.createSlider(0, 100, 0);
+
+        this.slider_support.position( canvas_x + 20,  canvas_y + 50);
+        this.slider_confidence.position( canvas_x + 20, canvas_y + 100 );
+        this.p.text('Support', this.slider_support.x + this.slider_support.width,  this.slider_support.y );
+        this.p.text('Confidence',  this.slider_confidence.x + this.slider_confidence.width,  this.slider_confidence.y );
+
+        this.drawSliders();
+
+    }
+
+    drawSliders(){
+        let support = this.slider_support.value();
+        let confidence = this.slider_confidence.value();
+        return [support, confidence];
     }
 
     get p() {
