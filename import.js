@@ -5,6 +5,7 @@ class Data {
         this.rules = new Rules();
         this.metadata = new MetaData();
         this.full_data = [];
+        this.filtered_data = [];
     }
 
     /**
@@ -21,6 +22,7 @@ class Data {
                 dynamicTyping: true, //create ints and such dynamically
                 complete: function (results) {
                     that.full_data = results.data;
+                    that.filtered_data = results.data;
                     that.all_indeces = [...Array(that.full_data.length).keys()];
                     try {
                         that.importFeaturesAndItsValues(results);
@@ -30,6 +32,19 @@ class Data {
                     }
                     // Do other stuff
                 }
+            });
+        });
+    }
+
+    /**
+     * Filter the data according to a given attribute value.
+     * @param {Map} criteria in the form {{key:value}}
+     * @returns {filtered_data}
+     */
+    filterData(criteria){
+        return this.filtered_data.filter(function (row) {
+            return Object.keys(criteria).every(function (c) {
+                return row[c] === criteria[c];
             });
         });
     }
