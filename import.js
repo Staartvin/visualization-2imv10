@@ -23,6 +23,8 @@ class Data {
                 complete: function (results) {
                     that.full_data = results.data;
                     that.filtered_data = results.data;
+                    //that.filtered_data = that.filterData({age:'30-', loan:'no'}, ['>', '=']);
+                    //that.filtered_data = that.filterDataRegEx({age: /^3\d(-|\+)$/});
                     that.all_indeces = [...Array(that.full_data.length).keys()];
                     try {
                         that.importFeaturesAndItsValues(results);
@@ -41,11 +43,30 @@ class Data {
      * @param {Map} criteria in the form {{key:value}}
      * @returns {filtered_data}
      */
-    filterData(criteria){
+    filterData(criteria, operation){
         return this.filtered_data.filter(function (row) {
             return Object.keys(criteria).every(function (c) {
                 return row[c] === criteria[c];
             });
+        });
+    }
+
+    /**
+     * Filter the data with regular expressions.
+     * @param {Map} criteria in the form {{key:value}}, value should be a regular expression
+     * @returns {filtered_data}
+     */
+    filterDataRegEx(criteria){
+        return this.filtered_data.filter(function(row) {
+            return Object.keys(criteria).every(function(c) {
+                return new RegExp(criteria[c]).test(row[c]);
+            });
+        });
+    }
+
+    mapOperAndCriteria(criteria, map){
+        return criteria.map(function(e, i) {
+            return [e, map[i]];
         });
     }
 
