@@ -23,8 +23,8 @@ class Data {
                 complete: function (results) {
                     that.full_data = results.data;
                     that.filtered_data = results.data;
-                    that.filtered_data = that.filterData({age:'30-', loan:'no'});
-                    //that.filtered_data = that.filterDataRegEx({age: /^3\d(-|\+)$/});
+                    //that.filtered_data = that.filterData({age:'30-', loan:'no'});
+                   //that.filtered_data = that.filterDataRegEx({age: /(?!30-)(([0-9][0-9])(-)$)/});
                     that.all_indeces = [...Array(that.full_data.length).keys()];
                     try {
                         that.importFeaturesAndItsValues(results);
