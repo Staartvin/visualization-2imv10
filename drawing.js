@@ -630,7 +630,7 @@ class FilterView {
 
         return function () {
             // We draw an initial canvas.
-            let canvas = self.p.createCanvas(self.p.windowWidth * filterViewWidth, self.p.windowHeight * 3 / 5);
+            let canvas = self.p.createCanvas(self.p.windowWidth * filterViewWidth, self.p.windowHeight * 4 / 5);
             canvas.background(255);
             canvas.position((controlViewWidth + rulesViewWidth) * self.p.windowWidth, 0);
             FilterView.canvas = canvas;
@@ -682,12 +682,12 @@ class FilterView {
         this.p.textAlign(this.p.LEFT, this.p.CENTER);
         this.p.textSize(25);
 
-        this.p.text('Filter the rules', FilterView.xMargin, FilterView.canvas.height - 100);
-        FilterView.p5.text('Filter the data', FilterView.xMargin, FilterView.canvas.y + 275);
+        this.p.text('Filter the rules', FilterView.xMargin, FilterView.canvas.height - 75);
+        FilterView.p5.text('Filter the data', FilterView.xMargin, FilterView.canvas.y + FilterView.canvas.height/2 - 15);
 
         this.p.textSize(15);
         this.p.textStyle(this.p.BOLD);
-        FilterView.p5.text('Feature:', FilterView.xMargin, FilterView.canvas.y + 310);
+        FilterView.p5.text('Feature:', FilterView.xMargin, FilterView.canvas.y + FilterView.canvas.height/2 + 10);
         this.p.textStyle(this.p.NORMAL);
         this.p.textSize(15);
         this.p.text('Support', FilterView.xMargin, FilterView.sliderSupport.y + FilterView.sliderSupport.height / 2);
@@ -808,8 +808,8 @@ class FilterView {
     setupSliders() {
         FilterView.sliderSupport = this.p.createSlider(0, 100, 0);
         FilterView.sliderConfidence = this.p.createSlider(0, 100, 0);
-        FilterView.sliderSupport.position(FilterView.canvas.x + FilterView.xSliderMargin, FilterView.canvas.y + FilterView.canvas.height - 75);
-        FilterView.sliderConfidence.position(FilterView.canvas.x + FilterView.xSliderMargin, FilterView.canvas.y + FilterView.canvas.height - 50);
+        FilterView.sliderSupport.position(FilterView.canvas.x + FilterView.xSliderMargin, FilterView.canvas.y + FilterView.canvas.height - 50);
+        FilterView.sliderConfidence.position(FilterView.canvas.x + FilterView.xSliderMargin, FilterView.canvas.y + FilterView.canvas.height - 25);
 
         FilterView.sliderSupport.input(this.supportSliderOnChange);
         FilterView.sliderConfidence.input(this.confSliderOnChange);
@@ -838,7 +838,7 @@ class FilterView {
      */
     static setupSelector() {
         let sel = FilterView.p5.createSelect();
-        sel.position(FilterView.canvas.x + FilterView.xMargin + FilterView.p5.textWidth("Feature:") + 10, FilterView.canvas.y + 300);
+        sel.position(FilterView.canvas.x + FilterView.xMargin + FilterView.p5.textWidth("Feature:") + 10, FilterView.canvas.y + FilterView.canvas.height/2);
         // add all features to the selector
         for (let feature of RulesView.featureOrder) {
             sel.option(feature.name);
@@ -876,7 +876,7 @@ class FilterView {
         }
 
         let columns = 2;
-        let Y = FilterView.canvas.y + 300;
+        let Y = FilterView.canvas.y + FilterView.canvas.height/2;
         let Y_step = 25;
         let X_step = (FilterView.canvas.width - 50) / columns;
         let index = 0;
@@ -1012,9 +1012,9 @@ class InfoView {
 
         return function () {
             // We draw an initial canvas.
-            let canvas = self.p.createCanvas(self.p.windowWidth * filterViewWidth, self.p.windowHeight * 2 / 5);
+            let canvas = self.p.createCanvas(self.p.windowWidth * filterViewWidth, self.p.windowHeight * 1 / 5);
             canvas.background(255);
-            canvas.position((controlViewWidth + rulesViewWidth) * self.p.windowWidth, self.p.windowHeight * 3 / 5);
+            canvas.position((controlViewWidth + rulesViewWidth) * self.p.windowWidth, self.p.windowHeight * 4 / 5);
 
 
         }
