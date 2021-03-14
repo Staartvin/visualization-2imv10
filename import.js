@@ -23,7 +23,7 @@ class Data {
                 complete: function (results) {
                     that.full_data = results.data;
                     that.filtered_data = results.data;
-                    //that.filtered_data = that.filterData({age:'30-', loan:'no'}, ['>', '=']);
+                    that.filtered_data = that.filterData({age:'30-', loan:'no'});
                     //that.filtered_data = that.filterDataRegEx({age: /^3\d(-|\+)$/});
                     that.all_indeces = [...Array(that.full_data.length).keys()];
                     try {
@@ -43,7 +43,7 @@ class Data {
      * @param {Map} criteria in the form {{key:value}}
      * @returns {filtered_data}
      */
-    filterData(criteria, operation){
+    filterData(criteria){
         return this.filtered_data.filter(function (row) {
             return Object.keys(criteria).every(function (c) {
                 return row[c] === criteria[c];
@@ -64,11 +64,6 @@ class Data {
         });
     }
 
-    mapOperAndCriteria(criteria, map){
-        return criteria.map(function(e, i) {
-            return [e, map[i]];
-        });
-    }
 
     /**
      * Import features and its values in the metadata
@@ -175,7 +170,7 @@ class Data {
     }
 
     /**
-     * Function that orders features accoring to their strength.
+     * Function that orders features according to their strength.
      * Returns the ordering of the feature as they should appear in the DAG
      * @returns {[Feature]} ordered list of feature names
      */

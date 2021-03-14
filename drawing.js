@@ -724,9 +724,6 @@ class RulesView {
         this.p.textSize(Math.min(15, columnHeight * 3 / 5));
 
         let ruleIndex = 0;
-        // let filtered_rules = RulesView.rules.rules;
-        // let support_lim = FilterView.support_val;
-        // let confidence_lim = FilterView.conf_val;
         let number_of_not_shown_rules = 0;
 
 
