@@ -41,10 +41,10 @@ class Data {
     /**
      * Filter the data according to a given attribute value.
      * @param {Map} criteria in the form {{key:value}}
-     * @returns {filtered_data}
+     * @returns {[]}
      */
     filterData(criteria, operation){
-        return this.filtered_data.filter(function (row) {
+        return this.full_data.filter(function (row) {
             return Object.keys(criteria).every(function (c) {
                 return row[c] === criteria[c];
             });
@@ -54,12 +54,15 @@ class Data {
     /**
      * Filter the data with regular expressions.
      * @param {Map} criteria in the form {{key:value}}, value should be a regular expression
-     * @returns {filtered_data}
+     * @returns {[]}
      */
     filterDataRegEx(criteria){
-        return this.filtered_data.filter(function(row) {
-            return Object.keys(criteria).every(function(c) {
-                return new RegExp(criteria[c]).test(row[c]);
+        return this.full_data.filter(function(row) {
+            return Array.from(criteria.keys()).every(function(feature) {
+                // console.log('criteria: ' + criteria.get(feature));
+                // console.log('row: ' + row[feature]);
+                // console.log(new RegExp(criteria.get(feature)).test(row[feature]));
+                return new RegExp(criteria.get(feature)).test(row[feature]);
             });
         });
     }
@@ -369,7 +372,7 @@ class Rules {
         }
 
         //loop over all data and check by while rule the data is satisfied
-        let numberOfRules = 0;
+        let numberOfRows = 0;
         outerloop:
             for (let row of all_data) {
                 ruleloop:
@@ -382,14 +385,14 @@ class Rules {
                         // all values are equal to the rule
                         rule.instancesSatisfiedByRules += 1;
                         rule.perLabelNumberOfInstances.get(row['label']).val++; // increase specific label value
-                        numberOfRules++;
+                        numberOfRows++;
                         continue outerloop
                     }
             }
 
         // determine the support and confidence of each rule
         for (let rule of this.rules) {
-            rule.setSupportAndConfidence(numberOfRules);
+            rule.setSupportAndConfidence(numberOfRows);
         }
     }
 }
@@ -486,7 +489,11 @@ class Rule {
      */
     setSupportAndConfidence(number_of_rows){
         this.support = (this.instancesSatisfiedByRules/number_of_rows)*100; //in percentage
-        this.confidence =  this.perLabelNumberOfInstances.get(this.label).val/this.instancesSatisfiedByRules*100; //in percentage
+        if (this.instancesSatisfiedByRules === 0){
+            this.confidence = 0;
+        } else {
+            this.confidence =  this.perLabelNumberOfInstances.get(this.label).val/this.instancesSatisfiedByRules*100; //in percentage
+        }
         this.truePositives = this.perLabelNumberOfInstances.get(this.label).val;
         this.falsePositives = this.instancesSatisfiedByRules - this.truePositives;
     }

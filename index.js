@@ -19,6 +19,9 @@ all_data.importData()
         // Communicate rules to the rules view.
         RulesView.setRules(all_data.rules);
 
+        // Draw the checkboxes of the filters
+        FilterView.setupSelector();
+
     })
     .catch((e) => {
         // console.log(e.toString());

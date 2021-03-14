@@ -1,477 +1,3 @@
-// class StructuralView {
-//
-//     /**
-//      * DAG that we want to show
-//      * @type {DAG}
-//      */
-//     static DAG = null;
-//
-//     /**
-//      * The order of the features.
-//      * @type {[Feature]}
-//      */
-//     static featureOrder = [];
-//     static depthDAG = 0;
-//     static heightDAG = 0;
-//
-//     /**
-//      * Store the color of each outcome value
-//      * @type {Map<String, String>}
-//      */
-//     static outcomeColors = new Map();
-//
-//     /**
-//      * The unique labels that are present in the DAG.
-//      * @type {[string]}
-//      */
-//     static differentLabels = [];
-//
-//     static possibleColors = {
-//         blue: "#1F77B4",
-//         orange: "#FF7F0E",
-//         green: "#2CA02C",
-//         red: "#D62728",
-//         purple: "#9467BD",
-//         brown: "#8C564B",
-//         pink: "#E377C2",
-//         gray: "#7F7F7F",
-//         olive: "#BCBD22",
-//         cyan: "#17BECF"
-//     }
-//
-//     /**
-//      * Keeping track of nodes that are (or should be) drawn.
-//      * @type {[DrawnNode]}
-//      */
-//     drawnNodes = []
-//
-//     /**
-//      * The offset from the top to use for a bar (and not for drawing the graph)
-//      * @type {number}
-//      */
-//     yOffset = 100;
-//
-//     /**
-//      * The offset from the left where we don't draw.
-//      * @type {number}
-//      */
-//     xOffset = 0;
-//
-//     // Coordinates of selector square
-//     selectorSquare = {x: 0, y: 0, width: 250, height: 150};
-//     selectorSquareDrawn = false;
-//     previousMousePress = false;
-//
-//     constructor(p) {
-//         this._p = null;
-//         this.p = p;
-//     }
-//
-//     get setup() {
-//         let self = this;
-//
-//         return function () {
-//             let canvas = self.p.createCanvas(self.p.windowWidth / 3, self.p.windowHeight * 3/4);
-//             canvas.background(255);
-//             canvas.position(0, 0);
-//
-//             // We're using rectmode radius (because we want to draw from the radius
-//             self.p.rectMode(self.p.RADIUS);
-//
-//             self.drawBorder();
-//             self.drawDecisionBorder();
-//         }
-//     }
-//
-//     get draw() {
-//         let self = this;
-//         return function () {
-//             // Don't draw the DAG if there is nothing
-//             if (!StructuralView.DAG) {
-//                 return;
-//             }
-//
-//             self.p.noStroke();
-//             self.p.noFill();
-//             let color = self.p.color(255, 255);
-//             self.p.background(color);
-//
-//             self.drawBorder();
-//             self.drawDecisionBorder();
-//
-//             // First calculate where nodes are.
-//             self.calculateNodePositions();
-//
-//             // Then draw the nodes
-//             self.drawNodesAndEdges();
-//
-//             // Try to draw the selector square
-//             self.drawSelectorSquare();
-//
-//         }
-//     }
-//
-//     /**
-//      * This method will draw the selector square. It is used by the draw() method to detect whenever the mouse is pressed.
-//      */
-//     drawSelectorSquare() {
-//         if (this.p.mouseIsPressed) {
-//             // Draw the selector square
-//             this.selectorSquareDrawn = true;
-//
-//             // If the previous mouse press was false, we know that the user just started clicking
-//             if (this.previousMousePress === false) {
-//                 // Set the first click as a starting point
-//                 this.selectorSquare.x = this.p.mouseX;
-//                 this.selectorSquare.y = this.p.mouseY;
-//             }
-//
-//             // Set width and height based on distance from starting point to your mouse
-//             this.selectorSquare.width = this.p.mouseX - this.selectorSquare.x ;
-//             this.selectorSquare.height = this.p.mouseY - this.selectorSquare.y;
-//
-//             // The previous mouse press can now be set to true
-//             this.previousMousePress = true;
-//         } else {
-//             // Previous mouse press was false.
-//             this.previousMousePress = false;
-//         }
-//
-//         // Now draw selector field (if needed)
-//         if (this.selectorSquareDrawn) {
-//             // Let's draw the selector field
-//
-//             let color = this.p.color("#fcba03");
-//
-//             color.setAlpha(15);
-//
-//             this.p.push();
-//             this.p.fill(color);
-//             this.p.stroke("#fcba03");
-//             this.p.strokeWeight(3);
-//             this.p.rectMode(this.p.CORNER);
-//             this.p.rect(this.selectorSquare.x, this.selectorSquare.y,
-//                 this.selectorSquare.width, this.selectorSquare.height);
-//             this.p.pop();
-//         }
-//     }
-//
-//     /**
-//      * Draw the nodes and edges between the nodes. This method assumes that the positions of the nodes are already calculated
-//      * using a function like {@link calculateNodePositions}.
-//      */
-//     drawNodesAndEdges() {
-//         // Loop over all nodes we need to draw
-//         for (let drawnNode of this.drawnNodes) {
-//
-//             // Check if this is a decision node
-//             if (drawnNode.nodeData.isLabelNode()) {
-//                 // Draw a square instead of a circle
-//                 // Lookup the color of this outcome node
-//                 let color = this.getColorOfOutcomeValue(drawnNode.nodeData.value);
-//
-//                 if (color !== null) {
-//                     this.p.fill(color);
-//                 }
-//
-//                 this.p.stroke(0);
-//                 this.p.square(drawnNode.x, drawnNode.y, drawnNode.width / 2);
-//             } else {
-//                 // Else, we're drawing a circle because it's a normal node.
-//                 this.p.fill(0);
-//                 this.p.stroke(0);
-//                 this.p.circle(drawnNode.x, drawnNode.y, drawnNode.width);
-//             }
-//
-//             // Next draw the edges between the nodes.
-//
-//             // Check if we have a 'true' edge.
-//             if (drawnNode.nodeData.true_node !== null) {
-//                 // Try to draw a line from this node to the true node
-//                 // Grab next node
-//                 let closeNode = this.drawnNodes.find(node => node.nodeData === drawnNode.nodeData.true_node);
-//
-//                 // If we cannot find the next node, let's skip it.
-//                 if (closeNode === undefined || closeNode === null) {
-//                     continue;
-//                 }
-//                 this.p.stroke(0);
-//
-//                 // Draw a curve between the current node and the next node.
-//                 this.p.line(drawnNode.x, drawnNode.y, closeNode.x, closeNode.y);
-//
-//                 // Draw a triangle to signal an arrowhead - it faces rightwards!
-//                 // Size of arrow is scaled by the size of the nodes, and 10 (such that they are not too large if nodes are large).
-//                 this.p.triangle(closeNode.x - closeNode.width / 2, drawnNode.y,
-//                     closeNode.x - closeNode.width / 2 - Math.min(closeNode.width/2, 10), drawnNode.y + Math.min(closeNode.width/2, 10),
-//                     closeNode.x - closeNode.width / 2 - Math.min(closeNode.width/2, 10), drawnNode.y - Math.min(closeNode.width/2, 10));
-//
-//             }
-//
-//             // Check if we have a 'false' edge.
-//             if (drawnNode.nodeData.false_node !== null) {
-//                 // Try to draw a line from this node to the false node
-//                 // Grab next node
-//                 let closeNode = this.drawnNodes.find(node => node.nodeData === drawnNode.nodeData.false_node);
-//
-//                 // If we cannot find the next node, let's skip it.
-//                 if (closeNode === undefined || closeNode === null) {
-//                     continue;
-//                 }
-//
-//                 if (drawnNode.x < closeNode.x) {
-//                     // We're going to a node that's on the right of the currently drawn node
-//                     // This means that we have to draw a line straight down (to the Y line of the next node)
-//                     // and then draw a line from there to the next node.
-//                     // this.p.stroke("#2cb30e");
-//                     this.p.line(drawnNode.x, drawnNode.y, drawnNode.x, closeNode.y); // Draw line straight down
-//                     this.p.line(drawnNode.x, closeNode.y, closeNode.x, closeNode.y); // Draw horizontal line to the next node.
-//
-//                     // Draw a triangle to signal an arrowhead - it faces rightwards!
-//                     this.p.triangle(closeNode.x - closeNode.width / 2, closeNode.y,
-//                         closeNode.x - closeNode.width / 2 - Math.min(closeNode.width/2, 10), closeNode.y + Math.min(closeNode.width/2, 10),
-//                         closeNode.x - closeNode.width / 2 - Math.min(closeNode.width/2, 10), closeNode.y - Math.min(closeNode.width/2, 10));
-//
-//                 } else if (drawnNode.x > closeNode.x) {
-//                     // We're going to a node that's on the left of the currently drawn node.
-//                     // We want to draw line halfway between the two nodes.
-//                     // this.p.stroke("#b50d6c");
-//
-//                     // Determine the distance (on the y-axis) between the two nodes.
-//                     let yDistance = Math.abs(closeNode.y - drawnNode.y);
-//
-//                     // Draw a line halfway down.
-//                     this.p.line(drawnNode.x, drawnNode.y, drawnNode.x, drawnNode.y + (yDistance / 2));
-//                     // Draw line to the left.
-//                     this.p.line(drawnNode.x, drawnNode.y + (yDistance / 2), closeNode.x, drawnNode.y + (yDistance / 2));
-//                     // Draw line down to the next node.
-//                     this.p.line(closeNode.x, drawnNode.y + (yDistance / 2), closeNode.x, closeNode.y);
-//
-//                     // Draw a triangle to signal an arrowhead - it faces downwards!
-//                     this.p.triangle(closeNode.x, closeNode.y - closeNode.width / 2,
-//                         closeNode.x - Math.min(closeNode.width/2, 10), closeNode.y - closeNode.width / 2 - Math.min(closeNode.width/2, 10),
-//                         closeNode.x + Math.min(closeNode.width/2, 10), closeNode.y - closeNode.width / 2 - Math.min(closeNode.width/2, 10));
-//                 } else {
-//
-//                     // Draw a line straight down.
-//                     this.p.line(drawnNode.x, drawnNode.y, closeNode.x, closeNode.y);
-//
-//                     // Draw a triangle to signal an arrowhead
-//                     this.p.triangle(closeNode.x, closeNode.y - closeNode.width / 2,
-//                         closeNode.x - Math.min(closeNode.width/2, 10), closeNode.y - closeNode.width / 2 - Math.min(closeNode.width/2, 10),
-//                         closeNode.x + Math.min(closeNode.width/2, 10), closeNode.y - closeNode.width / 2 - Math.min(closeNode.width/2, 10));
-//                 }
-//
-//             }
-//         }
-//     }
-//
-//     /**
-//      * This method calculates the positions of the nodes based on the available features. It draws the labels at the top
-//      * for each attribute and generates {DrawnNode} instances that signal where each node has to be drawn.
-//      */
-//     calculateNodePositions() {
-//
-//         // Clear all drawn nodes
-//         this.drawnNodes.length = 0;
-//
-//         // Get the unique number of labels we have, but
-//         let numberOfLabels = StructuralView.featureOrder.length;
-//         // The space per feature (based on the number of labels).
-//         let featureWidth = this.getCanvasWidth() / numberOfLabels;
-//         // The height per feature (based on the number of rules of the DAG).
-//         let featureHeight = this.getCanvasHeight() / (StructuralView.heightDAG);
-//
-//         let featureSpace = [];
-//
-//         // Determine the width of a column for each attribute and draw the label of that attribute on top.
-//         for (let index = 0; index < numberOfLabels; index++) {
-//             let x = featureWidth + featureWidth * index;
-//
-//             let feature = StructuralView.featureOrder[index]
-//             featureSpace.push({feature: feature, xStart: x - featureWidth, xEnd: x});
-//
-//             this.p.push();
-//             // Draw the names of the features on top
-//             // Make label feature bold
-//             this.p.strokeWeight(feature.isLabel ? 1 : 0);
-//             this.p.textSize(20);
-//             this.p.textAlign(this.p.CENTER);
-//             // P5 works a bit weird with rotations. Objects rotate with respect to the origin
-//             // This means that I have to place the text on the origin, rotate it and then translate it to where I want it to go.
-//             this.p.translate(x - featureWidth / 2, this.yOffset / 2);
-//             this.p.rotate(-this.p.HALF_PI/2);
-//             this.p.text(feature.name, 0, 0);
-//             this.p.pop();
-//
-//         }
-//
-//         // The node should fit in the width and height of the feature space.
-//         // Hence, we take the minimum value of these two.
-//         let sizeOfNode = Math.min(featureWidth / 2, featureHeight / 2);
-//
-//         // We start at y = the offset + the middle of the first row.
-//         let y = this.yOffset + featureHeight / 2;
-//
-//         // Determine the locations of the nodes.
-//         for (let node of StructuralView.DAG.getNodes()) {
-//
-//             // Find the dimensions of this feature
-//             let dimensions = featureSpace.find(space => space.feature.name === node.feature.name)
-//
-//             // We couldn't find any dimensions!
-//             if (dimensions === undefined) {
-//                 continue;
-//             }
-//
-//             let isLabelNode = node.isLabelNode();
-//
-//             let width = dimensions.xEnd - dimensions.xStart;
-//
-//             // Put node here.
-//             this.drawnNodes.push(new DrawnNode(node, dimensions.xStart + width / 2, y,
-//                 sizeOfNode));
-//
-//             // We reached a decision node, so we increase the Y spacing (because we're on a new line).
-//             if (isLabelNode) {
-//                 // Increase the y by another row.
-//                 y += featureHeight;
-//             }
-//
-//         }
-//     }
-//
-//     drawBorder() {
-//         this.p.stroke("#C59EAE");
-//         this.p.strokeWeight(4);
-//         this.p.rect(0, 0, this.p.width, this.p.height);
-//
-//         // Draw horizontal bar below text
-//         this.p.fill(0);
-//         this.p.stroke(0);
-//         this.p.strokeWeight(1);
-//         this.p.line(0, this.yOffset, this.p.width, this.yOffset);
-//
-//     }
-//
-//     /**
-//      * Draw area when decision nodes are shown
-//      */
-//     drawDecisionBorder() {
-//         // Draw vertical border for decision nodes
-//         // this.p.stroke(0);
-//         // this.p.strokeWeight(1);
-//         // this.p.line(this.p.width - this.xOffset,
-//         //     this.yOffset, this.p.width - this.xOffset, this.p.height);
-//     }
-//
-//     getCanvasWidth() {
-//         return this.p.width;
-//     }
-//
-//     getCanvasHeight() {
-//         return this.p.height - this.yOffset;
-//     }
-//
-//     get p() {
-//         return this._p;
-//     }
-//
-//     set p(original) {
-//         this._p = original;
-//         this._p.draw = this.draw;
-//         this._p.setup = this.setup;
-//     }
-//
-//     /**
-//      * Set the DAG of the structural view.
-//      * @param dag
-//      */
-//     static setDagData(dag) {
-//         StructuralView.DAG = dag
-//         StructuralView.depthDAG = dag.getDepth();
-//         StructuralView.heightDAG = dag.getHeight();
-//
-//         let seenLabels = [];
-//
-//         // Find all different labels that are used
-//         for (let node of dag.getNodes()) {
-//             // We haven't seen this label before
-//             if (seenLabels.indexOf(node.feature.name) === -1) {
-//                 seenLabels.push(node.feature.name);
-//             }
-//         }
-//
-//         // Record the unique labels in this DAG.
-//         StructuralView.differentLabels = seenLabels;
-//
-//         console.log(`Loaded DAG into structural view!`)
-//     }
-//
-//     /**
-//      * Get the index (zero-based) of the name of the feature in the current feature ordering
-//      * @param featureName Name of the feature to search
-//      * @return The index of the feature in the feature ordering. Will return -1 if the feature is not found!
-//      */
-//     getFeatureIndex(featureName) {
-//         let index = 0;
-//         for (let feature of StructuralView.featureOrder) {
-//             if (feature.name === featureName) {
-//                 return index;
-//             }
-//
-//             index++;
-//         }
-//
-//         return -1;
-//     }
-//
-//     /**
-//      * Get the color (for the decision nodes) that is assigned to the given outcome value.
-//      * @param {string} outcome The value to get the color for.
-//      * @return {?string} color (in hex) or null if no color was found
-//      */
-//     getColorOfOutcomeValue(outcome) {
-//
-//         let color = StructuralView.outcomeColors.get(outcome);
-//
-//         if (color === undefined) {
-//             return null;
-//         }
-//
-//         return color;
-//     }
-//
-//     /**
-//      * Set the order of the features
-//      * @param {[Feature]} featureOrder A list of features, ordered in the way they should appear.
-//      */
-//     static setFeatureOrder(featureOrder) {
-//         StructuralView.featureOrder = featureOrder.filter(feature => StructuralView.differentLabels.includes(feature.name));
-//
-//         StructuralView.outcomeColors.clear();
-//
-//         this.assignColorsToOutcomes();
-//     }
-//
-//     /**
-//      * Try to assign unique color to each outcome. It uses the #featureOrder variable to determine the label that has the outcome values.
-//      */
-//     static assignColorsToOutcomes() {
-//         // Find the feature that is the outcome feature
-//         let outcomeFeature = StructuralView.featureOrder.find(feature => feature.isLabel);
-//
-//         if (outcomeFeature !== undefined) {
-//             let index = 0;
-//             // Loop over the feature that has the outcomes and assign a color to each outcome value
-//             for (let value of outcomeFeature.values) {
-//                 StructuralView.outcomeColors.get(value] =Object.keys(StructuralView.possibleColors)[index];
-//                 index++;
-//             }
-//         }
-//     }
-// }
-
 rulesViewWidth = 4 / 6;
 controlViewWidth = 1 / 6;
 filterViewWidth = 1 / 6;
@@ -724,9 +250,6 @@ class RulesView {
         this.p.textSize(Math.min(15, columnHeight * 3 / 5));
 
         let ruleIndex = 0;
-        // let filtered_rules = RulesView.rules.rules;
-        // let support_lim = FilterView.support_val;
-        // let confidence_lim = FilterView.conf_val;
         let number_of_not_shown_rules = 0;
 
 
@@ -735,7 +258,12 @@ class RulesView {
             for (let rule of RulesView.filtered_rules.rules) {
                 let tp = rule.truePositives;
                 let fp = rule.falsePositives;
-                let ratio = tp / (tp + fp);
+                let ratio = 0;
+                if (tp + fp > 0) {
+                    ratio = tp / (tp + fp);
+                } else {
+                    ratio = 0;
+                }
                 //check if we should draw rule according to mouse clicks
                 for (let [feature, clicked] of RulesView.clickedFeatures.entries()) {
                     if (clicked) {
@@ -795,7 +323,7 @@ class RulesView {
                     this.p.fill(50); // set text color
                     this.p.text(value, x + 5, y - 2); //draw the text
                 }
-
+                this.p.strokeWeight(0);
                 //Draw the incoming cases
                 let tempX = this.xMargin; //set start value of X for incoming case distribution
                 let totalWidth = .95 * columnWidth; // this is the space we have
@@ -847,7 +375,7 @@ class RulesView {
                 // for squircles, we draw the foreground with the largest area (determined by ratio)
                 if (ratio > 0.5) {
                     let tempX = x - width / 2; //set x to correct x for CORNER
-                    let tempWidth = width * tp / (tp + fp); //find relative part of width
+                    let tempWidth = width * ratio; //find relative part of width
                     let tempY = y - height / 2;
                     this.p.fill(RulesView.outcomeColors.get(rule.label));
                     if (ratio < .85) {
@@ -860,8 +388,8 @@ class RulesView {
                         this.p.rect(tempX, tempY, tempWidth, height, 20);
                     }
                 } else { // draw negatives (due to squircles)
-                    let tempX = x - width / 2 + width * tp / (tp + fp); //set x to correct x for CORNER
-                    let tempWidth = width * (1 - tp / (tp + fp)); //find relative part of width
+                    let tempX = x - width / 2 + width * ratio; //set x to correct x for CORNER
+                    let tempWidth = width * (1 - ratio); //find relative part of width
                     let tempY = y - height / 2;
                     this.p.fill(255);
                     if (ratio > .15) {
@@ -881,7 +409,13 @@ class RulesView {
                 ruleIndex++;
             }
 
-        console.log(`Showing ${RulesView.rules.rules.length} rules!`)
+        console.log(`Showing ${RulesView.rules.rules.length} rules!`);
+        //print number of rules shown
+        this.p.fill(0);
+        this.p.strokeWeight(0);
+        let x = this.xMargin;
+        y = this.yOffset + RulesView.attributeColumnHeight + columnHeight - 20;
+        this.p.text(`${ruleIndex}/${RulesView.rules.rules.length} rules shown.`, x, y);
 
         // Remove the temp style
         this.p.pop();
@@ -1017,25 +551,78 @@ class ControlView {
 
 class FilterView {
 
-    static support_val = 0;
-    static conf_val = 0;
+    static xMargin = 25;
+    static xSliderMargin = 110;
+    static supportVal = 0;
+    static confVal = 0;
     /**
      *
      * @type {p5.Element}
      */
-    static slider_support = null;
+    static sliderSupport = null;
 
     /**
      *
      * @type {p5.Element}
      */
-    static slider_confidence = null;
+    static sliderConfidence = null;
+
+    /**
+     *
+     * @type {p5.Element}
+     */
+    static p5 = null;
+
+    /**
+     *
+     * @type {p5.Element}
+     */
+    static canvas = null;
+
+    /**
+     *
+     * @type {p5.Element}
+     */
+    static selectBox = null;
+
+    /**
+     *
+     * @type {[p5.Element]}
+     */
+
+    static checkboxes = [];
+
+    /**
+     *
+     * @type {Map<String, [String]>}
+     */
+    static selectedAttributes = new Map();
+
+    /**
+     *
+     * @type {[Rectangle]}
+     */
+    static filterBoxes = [];
+
+    /**
+     *
+     * @type {[p5.Element]}
+     */
+    static filteredAttributesElements = [];
+
+    /**
+     *
+     * @type {boolean}
+     */
+    static newFiltersSelected = false;
+
 
     constructor(p) {
         this._p = null;
         this.p = p;
-        this.slider_support = null;
-        this.slider_confidence = null;
+        FilterView.p5 = p;
+        this.sliderSupport = null;
+        this.sliderConfidence = null;
     }
 
     get setup() {
@@ -1043,9 +630,10 @@ class FilterView {
 
         return function () {
             // We draw an initial canvas.
-            let canvas = self.p.createCanvas(self.p.windowWidth * filterViewWidth, self.p.windowHeight / 2);
+            let canvas = self.p.createCanvas(self.p.windowWidth * filterViewWidth, self.p.windowHeight * 3 / 5);
             canvas.background(255);
             canvas.position((controlViewWidth + rulesViewWidth) * self.p.windowWidth, 0);
+            FilterView.canvas = canvas;
 
             self.drawBorder();
 
@@ -1053,7 +641,8 @@ class FilterView {
             self.p.push();
             self.p.textSize(15);
 
-            self.setupSliders(canvas.x, canvas.y);
+
+            self.setupSliders();
 
             self.p.pop();
         }
@@ -1062,58 +651,339 @@ class FilterView {
     get draw() {
         let self = this;
         return function () {
-            // self.supportSliderOnChange();
-            // self.confSliderOnChange();
+            self.p.background(255);
+            self.drawBorder();
+            self.drawTexts();
+            self.drawFilterBoxes();
         }
     }
 
+    /**
+     * Draw border of the view
+     */
     drawBorder() {
         this.p.stroke("#181818");
         this.p.strokeWeight(4);
         this.p.rect(0, 0, this.p.width, this.p.height);
+    }
 
-        // Draw title of structural view
+
+    /**
+     * Each time the static titles need to be drawn, otherwise overwritten by background
+     */
+    drawTexts() {
+        // Draw title of filter view
         this.p.noStroke();
         this.p.textSize(32);
         this.p.textAlign(this.p.CENTER);
         this.p.text("Filter view", this.p.width / 2, 30);
+
+        //Draw text of sliders
+        this.p.textAlign(this.p.LEFT, this.p.CENTER);
+        this.p.textSize(25);
+
+        this.p.text('Filter the rules', FilterView.xMargin, FilterView.canvas.height - 100);
+        FilterView.p5.text('Filter the data', FilterView.xMargin, FilterView.canvas.y + 275);
+
+        this.p.textSize(15);
+        this.p.textStyle(this.p.BOLD);
+        FilterView.p5.text('Feature:', FilterView.xMargin, FilterView.canvas.y + 310);
+        this.p.textStyle(this.p.NORMAL);
+        this.p.textSize(15);
+        this.p.text('Support', FilterView.xMargin, FilterView.sliderSupport.y + FilterView.sliderSupport.height / 2);
+        this.p.text('Confidence', FilterView.xMargin, FilterView.sliderConfidence.y + FilterView.sliderConfidence.height / 2);
+
+        let x_slider = FilterView.xSliderMargin + FilterView.sliderConfidence.width + 10;
+        let y_slider = FilterView.sliderSupport.y + FilterView.sliderSupport.height / 2;
+
+        this.p.text('(' + FilterView.supportVal + '%)', x_slider, y_slider)
+
+        x_slider = FilterView.xSliderMargin + FilterView.sliderConfidence.width + 10;
+        y_slider = FilterView.sliderConfidence.y + FilterView.sliderConfidence.height / 2;
+        this.p.text('(' + FilterView.confVal + '%)', x_slider, y_slider)
     }
 
-    setupSliders(canvas_x, canvas_y) {
-        FilterView.slider_support = this.p.createSlider(0, 100, 0);
-        FilterView.slider_confidence = this.p.createSlider(0, 100, 0);
+    /**
+     * Draw the filterboxes accordingly to FilterView.selectedAttributes
+     * Also update the list of filterboxes if needed
+     */
+    drawFilterBoxes() {
+        //reset the previously drawn filterboxes, if a change has occured with the filterboxes
+        //important to check, otherwise the filerboxes would be constantly emptied
+        if (FilterView.newFiltersSelected) {
+            FilterView.filterBoxes = [];
+        }
 
-        FilterView.slider_support.position(canvas_x + 20, canvas_y + 50);
-        FilterView.slider_confidence.position(canvas_x + 20, canvas_y + 100);
-        this.p.text('Support', FilterView.slider_support.width + FilterView.slider_support.width / 2, FilterView.slider_support.y + FilterView.slider_support.height);
-        this.p.text('Confidence', FilterView.slider_confidence.width + FilterView.slider_confidence.width / 2, FilterView.slider_confidence.y + FilterView.slider_confidence.height);
+        //create a new style
+        this.p.push();
+        //set start values
+        let Y = 60;
+        let Y_step = 30;
+        let X = FilterView.xMargin;
 
 
-        FilterView.slider_support.input(this.supportSliderOnChange);
-        FilterView.slider_confidence.input(this.confSliderOnChange);
+        for (let [feature, values] of FilterView.selectedAttributes.entries()) {
+            // only draw if filter selected
+            if (values.length === 0) {
+                continue;
+            }
+            this.p.textSize(15);
+            this.p.textStyle(this.p.BOLD);
+            this.p.textAlign(this.p.LEFT);
+            this.p.text(feature.name, FilterView.xMargin, Y);
+            Y += Y_step / 2;
+            for (let value of values) {
+                let text_in_box = 'X ' + value;
+                if (X + this.p.textWidth(text_in_box) + 5 + 20 >= this.p.width) {
+                    X = FilterView.xMargin;
+                    Y += Y_step;
+                }
+                //set style for rectangle
+                this.p.fill(240);
+                this.p.stroke(220);
+                this.p.strokeWeight(1);
+                this.p.rectMode(FilterView.p5.CORNER);
+                this.p.rect(X, Y, this.p.textWidth(text_in_box) + 5, 20, 3);
+                //create filterbox
+                let filterBox = new FilterBox(feature, value, X, Y, this.p.textWidth(text_in_box) + 5, 20);
+                //set style for text in rectangle
+                this.p.textStyle(this.p.NORMAL);
+                this.p.fill(0);
+                this.p.strokeWeight(0);
+                this.p.textAlign(FilterView.p5.CENTER);
+                this.p.text(text_in_box, X + (this.p.textWidth(text_in_box) + 5) / 2, Y + 11);
+                X += this.p.textWidth(text_in_box) + 5 + 20;
+                //add filterboxes if needed
+                if (FilterView.newFiltersSelected) {
+                    FilterView.filterBoxes.push(filterBox);
+                }
+            }
+            Y += Y_step + 5;
+            X = FilterView.xMargin;
+        }
+        this.p.pop();
+        //set boolean to false
+        FilterView.newFiltersSelected = false;
+
+        //draw hand on boxes
+        for (let filterbox of FilterView.filterBoxes) {
+            if (filterbox.mouseIn(this.p.mouseX, this.p.mouseY)) {
+                this.p.cursor('hand');
+                break;
+            } else {
+                this.p.cursor('default');
+            }
+        }
     }
 
+    /**
+     * If mouse clicked, make sure to check if a filterbox is selected
+     * If so, then remove the filterbox and filter of the selectedAttributes
+     * @returns {function(...[*]=)}
+     */
+    get mouse_clicked() {
+        let self = this;
+        return function () {
+            for (let filterbox of FilterView.filterBoxes) {
+                //check if mouse clicked on one of the filterboxes
+                if (filterbox.mouseIn(self.p.mouseX, self.p.mouseY)) {
+                    // remove label if label in list
+                    const index = FilterView.selectedAttributes.get(filterbox.feature).indexOf(filterbox.value);
+                    if (index > -1) {
+                        FilterView.selectedAttributes.get(filterbox.feature).splice(index, 1);
+                    }
+                    // update everything to include this change
+                    FilterView.filterData();
+                    FilterView.newFiltersSelected = true;
+                    FilterView.mySelectEvent();
+                }
+            }
+
+        }
+    }
+
+    /**
+     * Create the sliders for confidence and support
+     */
+    setupSliders() {
+        FilterView.sliderSupport = this.p.createSlider(0, 100, 0);
+        FilterView.sliderConfidence = this.p.createSlider(0, 100, 0);
+        FilterView.sliderSupport.position(FilterView.canvas.x + FilterView.xSliderMargin, FilterView.canvas.y + FilterView.canvas.height - 75);
+        FilterView.sliderConfidence.position(FilterView.canvas.x + FilterView.xSliderMargin, FilterView.canvas.y + FilterView.canvas.height - 50);
+
+        FilterView.sliderSupport.input(this.supportSliderOnChange);
+        FilterView.sliderConfidence.input(this.confSliderOnChange);
+    }
+
+    /**
+     * Update support according to the value of the slider
+     * Update the rules
+     */
     supportSliderOnChange() {
-        FilterView.support_val = FilterView.slider_support.value();
+        FilterView.supportVal = FilterView.sliderSupport.value();
         FilterView.updateFilteredRules();
     }
 
+    /**
+     * Update confidence according to the value of the slider
+     * Update the rules
+     */
     confSliderOnChange() {
-        FilterView.conf_val = FilterView.slider_confidence.value();
+        FilterView.confVal = FilterView.sliderConfidence.value();
         FilterView.updateFilteredRules();
     }
 
+    /**
+     * Create a selected to select the Feature Attribute
+     */
+    static setupSelector() {
+        let sel = FilterView.p5.createSelect();
+        sel.position(FilterView.canvas.x + FilterView.xMargin + FilterView.p5.textWidth("Feature:") + 10, FilterView.canvas.y + 300);
+        // add all features to the selector
+        for (let feature of RulesView.featureOrder) {
+            sel.option(feature.name);
+            FilterView.selectedAttributes.set(feature, []);
+        }
+        //If selector changed, call mySelectEvent
+        sel.changed(FilterView.mySelectEvent);
+        //Save the selectBox as a static variable
+        FilterView.selectBox = sel;
+        //Call mySelectEvent for the first time
+        FilterView.mySelectEvent();
+    }
+
+    /**
+     * Method called when selector is changed
+     * Creates checkboxes for all values of the selected feature
+     */
+    static mySelectEvent() {
+        //request the feature of the selectBox
+        let item = FilterView.selectBox.value();
+        // remove all checkboxes
+        for (let checkbox of FilterView.checkboxes) {
+            checkbox.remove();
+        }
+        //Empty the list of checkboxes
+        FilterView.checkboxes = [];
+
+        let correct_feature = null;
+        // find correct feature
+        for (let feature of RulesView.featureOrder) {
+            if (feature.name === item) {
+                correct_feature = feature;
+                break;
+            }
+        }
+
+        let columns = 2;
+        let Y = FilterView.canvas.y + 300;
+        let Y_step = 25;
+        let X_step = (FilterView.canvas.width - 50) / columns;
+        let index = 0;
+        for (let value of correct_feature.values) {
+            //Only draw as much items as columns on a row
+            if (index % columns === 0) {
+                Y += Y_step;
+            }
+            let checked = true;
+            // set checked to false if not in the selected Attributes list
+            if (FilterView.selectedAttributes.get(correct_feature).indexOf(value) === -1) {
+                checked = false;
+            }
+            //Create new checkboxes and position them
+            let checkbox = FilterView.p5.createCheckbox(value, checked);
+            checkbox.position(FilterView.canvas.x + FilterView.xMargin + (index % columns) * X_step, Y);
+            //Add a function to when the checkboxes are clicked
+            checkbox.changed(FilterView.myCheckedEvent);
+            //Add checkbox to list
+            FilterView.checkboxes.push(checkbox);
+            index += 1;
+        }
+    }
+
+    /**
+     * Method called when a checkbox is checked
+     * Add the attribute to the selectedAttributes and update the data, and rules
+     */
+    static myCheckedEvent() {
+        let feature_name = FilterView.selectBox.value();
+        let correct_feature = null;
+        for (let feature of RulesView.featureOrder) {
+            if (feature.name === feature_name) {
+                correct_feature = feature;
+                break;
+            }
+        }
+
+        for (let checkbox of FilterView.checkboxes) {
+            let label = checkbox.elt.value;
+            if (checkbox.checked()) {
+                // add label if label not in list yet
+                if (FilterView.selectedAttributes.get(correct_feature).indexOf(label) === -1) {
+                    FilterView.selectedAttributes.get(correct_feature).push(label)
+                }
+            } else {
+                // remove label if label in list
+                const index = FilterView.selectedAttributes.get(correct_feature).indexOf(label);
+                if (index > -1) {
+                    FilterView.selectedAttributes.get(correct_feature).splice(index, 1);
+                }
+            }
+        }
+        FilterView.filterData();
+        //Set to true such that the filterboxes are updated
+        FilterView.newFiltersSelected = true;
+    }
+
+    /**
+     * Method to filter the data of the all_data object
+     */
+    static filterData() {
+        let map = new Map();
+        for (let [feature, values] of FilterView.selectedAttributes.entries()) {
+            // no item is selected, so all items are allowed
+            let criteria = "";
+            if (values.length > 0) {
+                for (let value of values) {
+                    //| is to indicate or between values
+                    //encodeUri to make sure all needed characters are escaped
+                    criteria += encodeURI(value) + "|";
+                }
+                //remove last character (one | too many)
+                criteria = criteria.slice(0, -1);
+                //Add to the map
+                map.set(feature.name, criteria);
+            }
+        }
+        //Update
+        all_data.filtered_data = all_data.filterDataRegEx(map);
+        all_data.rules.calculateSupportAndConf(all_data.filtered_data);
+        FilterView.updateFilteredRules();
+    }
+
+    /**
+     * Call method to update the rules according to support and confidence
+     */
     static updateFilteredRules() {
         RulesView.filtered_rules.rules = FilterView.filterRulesByVal(RulesView.rules.rules, {
-            support: FilterView.support_val,
-            confidence: FilterView.conf_val
+            support: FilterView.supportVal,
+            confidence: FilterView.confVal
         });
     }
 
+    /**
+     * Update rules according to support and confidence
+     * @param rules_to_filter
+     * @param criteria
+     * @returns {*}
+     */
     static filterRulesByVal(rules_to_filter, criteria) {
         return rules_to_filter.filter(function (rule) {
             return Object.keys(criteria).every(function (c) {
-                console.log(rule[c]);
+                //If zero, we only want to show rules that have a support or confidence larger than 0
+                if (criteria[c] === 0) {
+                    return rule[c] > criteria[c];
+                }
                 return rule[c] >= criteria[c];
             });
         });
@@ -1127,6 +997,7 @@ class FilterView {
         this._p = original;
         this._p.draw = this.draw;
         this._p.setup = this.setup;
+        this._p.mouseClicked = this.mouse_clicked;
     }
 }
 
@@ -1141,18 +1012,21 @@ class InfoView {
 
         return function () {
             // We draw an initial canvas.
-            let canvas = self.p.createCanvas(self.p.windowWidth * filterViewWidth, self.p.windowHeight / 2);
+            let canvas = self.p.createCanvas(self.p.windowWidth * filterViewWidth, self.p.windowHeight * 2 / 5);
             canvas.background(255);
-            canvas.position((controlViewWidth + rulesViewWidth) * self.p.windowWidth, self.p.windowHeight / 2);
+            canvas.position((controlViewWidth + rulesViewWidth) * self.p.windowWidth, self.p.windowHeight * 3 / 5);
 
-            self.drawBorder();
+
         }
     }
 
     get draw() {
         let self = this;
         return function () {
-
+            self.p.background(255);
+            self.drawBorder();
+            self.drawPill();
+            self.drawLegend();
         }
     }
 
@@ -1160,12 +1034,103 @@ class InfoView {
         this.p.stroke("#272727");
         this.p.strokeWeight(4);
         this.p.rect(0, 0, this.p.width, this.p.height);
+    }
 
-        // Draw title of structural view
-        this.p.noStroke();
-        this.p.textSize(32);
-        this.p.textAlign(this.p.CENTER);
-        this.p.text("Info view", this.p.width / 2, 30);
+    /**
+     * Draw pill for legend
+     */
+    drawPill(){
+        this.p.push();
+        let ratio = 0.5;
+        let outcomeFeature = RulesView.featureOrder.find(feature => feature.isLabel);
+        //only draw if outcomeFeature is defined
+        if (typeof outcomeFeature !== 'undefined'){
+            let label = '';
+            for (let value of outcomeFeature.values){
+                label = value;
+                break;
+            }
+            //set stle
+            let color = RulesView.outcomeColors.get(label);
+            this.p.fill(color); // set fill color true positives // true postives
+            this.p.stroke(color); //set stroke color of rectangle
+            this.p.strokeWeight(1); //make sure stroke is drawn
+
+            //set location and width
+            let x = (this.p.width)/2;
+            let y = 60;
+            let width = this.p.width-100;
+            //drae colored part of pull
+            this.p.rectMode(this.p.CENTER);
+            this.p.rect(x, y, width, 30, 50);
+
+            //draw white part of pill
+            let tempX = x + width / 4; //set x to correct x for CORNER
+            let tempWidth = width * ratio; //find relative part of width
+            this.p.fill(255);
+            this.p.rect(tempX, y, tempWidth, 30, 0, 50, 50, 0);
+
+            //fill with text
+            this.p.textAlign(this.p.LEFT);
+            this.p.fill(255);
+            this.p.strokeWeight(0);
+            this.p.textSize(12);
+            x = (this.p.width)*1/4;
+            this.p.text('Correctly', x, y-2);
+            this.p.text('classified',x, y+10);
+
+            this.p.fill(color);
+            x = (this.p.width)*1/2+1/8*width;
+            this.p.text('Incorrectly', x, y-2);
+            this.p.text('classified',x+2, y+10);
+
+            this.p.fill(0);
+            this.p.textSize(25);
+            this.p.textAlign(this.p.LEFT);
+            this.p.text("Legend", 25, 30);
+        }
+        this.p.pop();
+    }
+
+    /**
+     * Draw legend of labels
+     */
+    drawLegend(){
+        // Draw labels outcome
+        let x = 25;
+        let y = 115 - 15;
+        this.p.push();
+        // Draw the text
+        this.p.textAlign(this.p.LEFT);
+        this.p.fill(0);
+        this.p.strokeWeight(0);
+        this.p.textSize(20);
+        let title = "Labels:";
+        this.p.text(title, 25, 115);
+        this.p.pop();
+
+        // Find correct outcomeFeature
+        let outcomeFeature = RulesView.featureOrder.find(feature => feature.isLabel);
+        // Only draw if outcomeFeature is defined
+        if (typeof outcomeFeature !== 'undefined') {
+            for (let value of outcomeFeature.values) {
+                //create temp stule
+                this.p.push();
+                this.p.strokeWeight(0);
+                this.p.textAlign(this.p.LEFT);
+                this.p.rectMode(this.p.CORNER);
+                this.p.textSize(20);
+                this.p.fill(RulesView.outcomeColors.get(value));
+                this.p.rect(x+this.p.textWidth(title) + 15, y, 15, 15);
+
+                this.p.fill(0);
+                this.p.textSize(15);
+                this.p.textAlign(this.p.LEFT);
+                this.p.text(value, x+this.p.textWidth(title) + 15 + 40, y + 10);
+                this.p.pop();
+                y += 20;
+            }
+        }
     }
 
     get p() {
@@ -1211,22 +1176,26 @@ class Drawing {
     }
 }
 
-class DrawnNode {
-    /**
-     * Represents a node that is drawn at a location
-     * @param {Node} node Node data from DAG that is drawn here.
-     * @param {number} x X-location
-     * @param {number} y Y-location
-     * @param {number} width Width of the node that is drawn
-     */
-    constructor(node, x, y, width) {
-        this.nodeData = node;
+//Assumes a rectangle drawn from the corner
+class FilterBox {
+    constructor(feature, value, x, y, width, height) {
+        this.feature = feature;
+        this.value = value;
         this.x = x;
         this.y = y;
         this.width = width;
+        this.height = height;
     }
 
-
+    mouseIn(x, y) {
+        if (this.x <= x && x <= this.x + this.width) {
+            if (this.y <= y && y <= this.y + this.height) {
+                return true;
+            }
+        }
+        return false;
+    }
 }
+
 
 
