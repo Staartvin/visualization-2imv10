@@ -43,7 +43,7 @@ class Data {
      * @param {Map} criteria in the form {{key:value}}
      * @returns {[]}
      */
-    filterData(criteria, operation){
+    filterData(criteria){
         return this.full_data.filter(function (row) {
             return Object.keys(criteria).every(function (c) {
                 return row[c] === criteria[c];
@@ -67,11 +67,6 @@ class Data {
         });
     }
 
-    mapOperAndCriteria(criteria, map){
-        return criteria.map(function(e, i) {
-            return [e, map[i]];
-        });
-    }
 
     /**
      * Import features and its values in the metadata
@@ -178,7 +173,7 @@ class Data {
     }
 
     /**
-     * Function that orders features accoring to their strength.
+     * Function that orders features according to their strength.
      * Returns the ordering of the feature as they should appear in the DAG
      * @returns {[Feature]} ordered list of feature names
      */
