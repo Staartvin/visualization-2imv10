@@ -313,7 +313,8 @@ class RulesView {
                 this.p.line(xStart, y, xEnd, y);
 
                 // Draw values of conditions
-                for (let [feature, value] of rule.conditions.entries()) {
+                for (let [feature, condition] of rule.conditions.entries()) {
+                    let value = condition.unicode_equality + " " + condition.value;
                     this.p.strokeWeight(0); // we want no stroke on the text or circle
                     let featureIndex = RulesView.featureOrder.indexOf(feature); //get location of feature
 

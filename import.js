@@ -20,12 +20,14 @@ class Data {
                 header: true, //data contains header
                 download: true, //let parser know that file is located at path_to_data
                 dynamicTyping: true, //create ints and such dynamically
+                skipEmptyLines: true, //skip empty lines
                 complete: function (results) {
                     that.full_data = results.data;
                     that.filtered_data = results.data;
                     //that.filtered_data = that.filterData({age:'30-', loan:'no'}, ['>', '=']);
                     //that.filtered_data = that.filterDataRegEx({age: /^3\d(-|\+)$/});
                     that.all_indeces = [...Array(that.full_data.length).keys()];
+
                     try {
                         that.importFeaturesAndItsValues(results);
                         resolve();
@@ -43,7 +45,7 @@ class Data {
      * @param {Map} criteria in the form {{key:value}}
      * @returns {[]}
      */
-    filterData(criteria){
+    filterData(criteria) {
         return this.full_data.filter(function (row) {
             return Object.keys(criteria).every(function (c) {
                 return row[c] === criteria[c];
@@ -56,9 +58,9 @@ class Data {
      * @param {Map} criteria in the form {{key:value}}, value should be a regular expression
      * @returns {[]}
      */
-    filterDataRegEx(criteria){
-        return this.full_data.filter(function(row) {
-            return Array.from(criteria.keys()).every(function(feature) {
+    filterDataRegEx(criteria) {
+        return this.full_data.filter(function (row) {
+            return Array.from(criteria.keys()).every(function (feature) {
                 // console.log('criteria: ' + criteria.get(feature));
                 // console.log('row: ' + row[feature]);
                 // console.log(new RegExp(criteria.get(feature)).test(row[feature]));
@@ -109,6 +111,7 @@ class Data {
             Papa.parse(that.path_to_rules, {
                 download: true, //let parser know that file is located at path_to_rules
                 dynamicTyping: true, //create ints and such dynamically
+                skipEmptyLines: true, //skip empty lines
                 complete: function (results) {
                     // loop through the rules
                     results.data.forEach((row) => {
@@ -130,6 +133,9 @@ class Data {
                             actual_rule = actual_rule.split(" then ");
                             // get second value of actual rule (that is the label) and remove all start and end spaces.
                             let label = actual_rule[1].trim();
+                            if (isNumeric(label)){
+                                label = parseInt(label);
+                            }
                             let rule;
                             try { //try to create rule
                                 rule = new Rule(that.metadata.getFeature("label"), label, true_positives, false_positives); // create rule
@@ -140,12 +146,35 @@ class Data {
                             let conditions = actual_rule[0]; // get first value, those are the conditions
                             conditions = conditions.split(" and "); // get each condition seperate
                             for (let condition of conditions) {  // loop over all conditions
-                                condition = condition.split(" = "); // split condition in feature and value
+                                let equality_sign = "=";
+                                let unicode_sign = "=";
+                                if (condition.includes('!=') || condition.includes('\u2260')){ //unicode for not equal
+                                    equality_sign = "!=";
+                                    unicode_sign = '\u2260';
+                                } else if (condition.includes('>=') || condition.includes('\u2265') ){ //unicode for larger than or equal
+                                    equality_sign = ">=";
+                                    unicode_sign = '\u2265';
+                                } else if (condition.includes('<=') || condition.includes('\u2264')){ //unicode for smaller than or equal
+                                    equality_sign = "<=";
+                                    unicode_sign = '\u2264';
+                                } else if (condition.includes('>')){
+                                    equality_sign = ">";
+                                    unicode_sign = '>';
+                                } else if (condition.includes('<')){
+                                    equality_sign = "<";
+                                    unicode_sign = '<';
+                                } else {
+                                    equality_sign = "=";
+                                    unicode_sign = '=';
+                                }
+
+                                condition = condition.replace(unicode_sign, equality_sign);
+                                condition = condition.split(` ${equality_sign} `); // split condition in feature and value
                                 let feature = condition[0];
                                 let value = condition[1];
 
                                 try { // try to create actual Condition
-                                    rule.addCondition(that.metadata.getFeature(feature), value);
+                                    rule.addCondition(that.metadata.getFeature(feature), equality_sign, unicode_sign, value);
                                 } catch (e) {
                                     reject(e);
                                 }
@@ -154,6 +183,9 @@ class Data {
                         } else {
                             // remove else and all spaces at start and end
                             let label = actual_rule.replace("else ", "").trim();
+                            if (isNumeric(label)){
+                                label = parseInt(label);
+                            }
                             let rule;
                             try { //try to create default rule
                                 rule = new Rule(that.metadata.getFeature("label"), label);
@@ -361,8 +393,8 @@ class Rules {
         //reset everything to 0
         for (let rule of this.rules) {
             rule.instancesSatisfiedByRules = 0;
-            for (let key of rule.perLabelNumberOfInstances.keys()){
-                rule.perLabelNumberOfInstances.set(key, {val: 0});
+            for (let key of rule.perLabelNumberOfInstances.keys()) {
+                rule.perLabelNumberOfInstances.set(key, 0);
             }
         }
 
@@ -372,14 +404,14 @@ class Rules {
             for (let row of all_data) {
                 ruleloop:
                     for (let rule of this.rules) {
-                        for (let [feature, value] of rule.conditions.entries()) {
-                            if (row[feature.name] !== value) {
+                        for (let [feature, condition] of rule.conditions.entries()) {
+                            if (!condition.meetCondition(row[feature.name])){
                                 continue ruleloop; // rule not satisfied so continue to next rule
                             }
                         }
                         // all values are equal to the rule
                         rule.instancesSatisfiedByRules += 1;
-                        rule.perLabelNumberOfInstances.get(row['label']).val++; // increase specific label value
+                        rule.perLabelNumberOfInstances.set(row['label'], rule.perLabelNumberOfInstances.get(row['label']) + 1); // increase specific label value
                         numberOfRows++;
                         continue outerloop
                     }
@@ -396,7 +428,7 @@ class Rule {
     /**
      * Stores a rule with the conditions and the outcome (label) of the rule
      * @param {Feature} labelFeature The feature that represents the outcome (so the label feature)
-     * @param {string} label The value of the outcome
+     * @param {string || float || integer} label The value of the outcome
      * @param {number} truePositives True positives found for this rule
      * @param {number} falsePositives False positives found for this rule
      * @param {number} support Support of a rule, i.e. percentage of instances to which the condition of the rule applies
@@ -408,7 +440,7 @@ class Rule {
         this.falsePositives = falsePositives;
 
         this.perLabelNumberOfInstances = new Map();
-        for (let featureName of labelFeature.values){
+        for (let featureName of labelFeature.values) {
             this.perLabelNumberOfInstances.set(featureName, {val: 0});
         }
 
@@ -417,7 +449,7 @@ class Rule {
 
         this.support = support;
         this.confidence = confidence;
-        this.conditions = new Map(); //conditions are stored as (feature, value)
+        this.conditions = new Map(); //conditions are stored as (feature, condition)
         if (!labelFeature.values.has(label)) { //check if value of label actually exists
             throw new Error(`Label \'${label}\' does not occur in the label set`);
         }
@@ -431,50 +463,16 @@ class Rule {
     /**
      * Adds a condition to this rule
      * @param {Feature} feature Feature to set a condition on
+     * @param {string} equality
+     * @param {string} unicode_sign
      * @param {string} value Value that the should feature should be
      */
-    addCondition(feature, value) {
-        if (!feature.values.has(value)) { //check whether value belongs to feature
-            throw new Error(`The value \'${value}\' does not occur in the feature ${feature.name}`);
-        }
-        this.conditions.set(feature, value);
-    }
-
-    /**
-     * Get specific condition of rule by feature if existing, otherwise null
-     * @param {Feature} feature The feature to grab
-     * @returns {?string} returns the value of the condition belonging to that feature if existing
-     */
-    getConditionByFeature(feature) {
-        if (this.conditions.has(feature)) {
-            return this.conditions.get(feature);
-        } else {
-            return null;
-        }
-    }
-
-    /**
-     * Checks whether rule is satisfied by conditions
-     * @param conditions Map with key: feature, value: list of a boolean (indicates equal or not) and a string (the value)
-     * @returns {boolean}
-     */
-    satisfiesConditions(conditions) {
-        for (let [feature, value] of conditions) {
-            let equal = value[0];
-            let feature_value = value[1];
-            if (this.conditions.has(feature)) { //check if this rule has this feature
-                if (equal) {
-                    if (feature_value !== this.conditions.get(feature)) { //if not equal, then not satisfied
-                        return false
-                    }
-                } else {
-                    if (feature_value === this.conditions.get(feature)) { //if not equal, then not satisfied
-                        return false
-                    }
-                }
-            }
-        }
-        return true //all conditions are satisfied by the rule
+    addCondition(feature, equality, unicode_sign, value) {
+        // if (!feature.values.has(value)) { //check whether value belongs to feature
+        //     throw new Error(`The value \'${value}\' does not occur in the feature ${feature.name}`);
+        // }
+        let condition_object = new Condition(feature, equality, unicode_sign, value);
+        this.conditions.set(feature, condition_object);
     }
 
     /**
@@ -482,14 +480,62 @@ class Rule {
      * Also set the true and false positives
      * @param number_of_rows
      */
-    setSupportAndConfidence(number_of_rows){
-        this.support = (this.instancesSatisfiedByRules/number_of_rows)*100; //in percentage
-        if (this.instancesSatisfiedByRules === 0){
+    setSupportAndConfidence(number_of_rows) {
+        this.support = (this.instancesSatisfiedByRules / number_of_rows) * 100; //in percentage
+        if (this.instancesSatisfiedByRules === 0) {
             this.confidence = 0;
         } else {
-            this.confidence =  this.perLabelNumberOfInstances.get(this.label).val/this.instancesSatisfiedByRules*100; //in percentage
+            this.confidence = this.perLabelNumberOfInstances.get(this.label) / this.instancesSatisfiedByRules * 100; //in percentage
         }
-        this.truePositives = this.perLabelNumberOfInstances.get(this.label).val;
+        this.truePositives = this.perLabelNumberOfInstances.get(this.label);
         this.falsePositives = this.instancesSatisfiedByRules - this.truePositives;
     }
+}
+
+class Condition{
+    /**
+     * @param {Feature} feature Feature to set a condition on
+     * @param {string} equality ("===", ">=", ">", "<=", "<", "!==")
+     * @param {string} unicode for equality
+     * @param {string || float || integer} value Value that feature should be
+     */
+    constructor(feature, equality, unicode, value){
+        this.feature = feature;
+        this.equality = equality;
+        this.unicode_equality = unicode;
+        this.value = value;
+        if (isNumeric(this.value)){
+            this.value = parseFloat(this.value);
+        } else {
+            this.unicode_equality = "";
+        }
+    }
+
+    meetCondition(value){
+        if (typeof value === "string" && this.equality !== "=" && this.equality !== "!="){
+            throw new Error(`Cannot compare a string with ${this.equality}.`);
+        }
+        switch (this.equality){
+            case "=":
+                return value === this.value;
+            case "!=":
+                return value !== this.value;
+            case ">":
+                return value > this.value;
+            case "<":
+                return value < this.value;
+            case ">=":
+                return value >= this.value;
+            case "<=":
+                return value <= this.value;
+        }
+    }
+
+
+}
+
+function isNumeric(str) {
+    if (typeof str != "string") return false // we only process strings!
+    return !isNaN(str) && // use type coercion to parse the _entirety_ of the string (`parseFloat` alone does not do this)...
+        !isNaN(parseFloat(str)) // ...and ensure strings of whitespace fail
 }
