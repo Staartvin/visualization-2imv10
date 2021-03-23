@@ -104,8 +104,6 @@ class RulesView {
 
             self.p.background(255);
 
-            self.p.text("Rules view", self.p.width / 2, 30);
-
             // Don't draw anything if we have no features.
             if (RulesView.featureOrder.length === 0) {
                 return;
