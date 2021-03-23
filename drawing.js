@@ -250,6 +250,7 @@ class RulesView {
         let ruleIndex = 0;
         let number_of_not_shown_rules = 0;
 
+        var last_x;
 
         // For each rule, draw a row.
         loop1:
@@ -324,6 +325,7 @@ class RulesView {
                 }
                 this.p.strokeWeight(0);
                 //Draw the incoming cases
+
                 let tempX = this.xMargin; //set start value of X for incoming case distribution
                 let totalWidth = .95 * columnWidth; // this is the space we have
                 let remainingWidth = 1; // keep track of percentage of data not satisfied by rules
@@ -406,14 +408,35 @@ class RulesView {
                 // Increase Y so we go down to the next line
                 y += columnHeight;
                 ruleIndex++;
+                last_x = x;
             }
 
         console.log(`Showing ${RulesView.rules.rules.length} rules!`);
-        //print number of rules shown
+
+        //Print title for support
         this.p.fill(0);
         this.p.strokeWeight(0);
+
+        this.p.push();
+
+        this.p.textStyle(this.p.BOLD);
         let x = this.xMargin;
-        y = this.yOffset + RulesView.attributeColumnHeight + columnHeight - 20;
+        y = this.yOffset + RulesView.attributeColumnHeight + columnHeight - 15;
+        this.p.text(`Support`, x, y);
+
+
+        x = last_x - 40;
+        y = this.yOffset + RulesView.attributeColumnHeight + columnHeight - 15;
+        this.p.text(`Confidence`, x, y);
+
+        this.p.pop();
+
+
+        //print number of rules shown
+        this.p.strokeWeight(0);
+        this.p.textSize(Math.min(15, columnHeight * 3 / 5));
+        x = this.xMargin;
+        y = this.yOffset + RulesView.attributeColumnHeight + columnHeight - 70;
         this.p.text(`${ruleIndex}/${RulesView.rules.rules.length} rules shown.`, x, y);
 
         // Remove the temp style
