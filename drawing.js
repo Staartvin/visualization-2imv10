@@ -1036,7 +1036,7 @@ class InfoView {
             // We draw an initial canvas.
             let canvas = self.p.createCanvas(self.p.windowWidth * filterViewWidth, self.p.windowHeight * 1 / 5);
             canvas.background(255);
-            canvas.position((controlViewWidth + rulesViewWidth) * self.p.windowWidth, self.p.windowHeight * 4 / 5);
+            canvas.position(0, self.p.windowHeight * 4 / 5);
 
 
         }
