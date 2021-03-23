@@ -652,7 +652,7 @@ class FilterView {
 
         return function () {
             // We draw an initial canvas.
-            let canvas = self.p.createCanvas(self.p.windowWidth * filterViewWidth, self.p.windowHeight * 4 / 5);
+            let canvas = self.p.createCanvas(self.p.windowWidth * filterViewWidth, self.p.windowHeight );
             canvas.background(255);
             canvas.position((controlViewWidth + rulesViewWidth) * self.p.windowWidth, 0);
             FilterView.canvas = canvas;
