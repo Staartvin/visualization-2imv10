@@ -24,8 +24,6 @@ class Data {
                 complete: function (results) {
                     that.full_data = results.data;
                     that.filtered_data = results.data;
-                    //that.filtered_data = that.filterData({age:'30-', loan:'no'}, ['>', '=']);
-                    //that.filtered_data = that.filterDataRegEx({age: /^3\d(-|\+)$/});
                     that.all_indeces = [...Array(that.full_data.length).keys()];
 
                     try {
@@ -42,13 +40,34 @@ class Data {
 
     /**
      * Filter the data according to a given attribute value.
-     * @param {Map} criteria in the form {{key:value}}
+     * @param {Map} criteria in the form {{key:[value]}}
      * @returns {[]}
      */
     filterData(criteria) {
         return this.full_data.filter(function (row) {
-            return Object.keys(criteria).every(function (c) {
-                return row[c] === criteria[c];
+            return Array.from(criteria.keys()).every(function (feature) {
+                if (feature.isNumeric) {//if numeric, check min and max
+                    let inbetween = true;
+                    for (let values of criteria.values()) {
+                        for (let criterium of values) {
+                            criterium = criterium.split(" ");
+                            let equality_sign = criterium[0];
+                            let value = parseFloat(criterium[1]);
+                            if (equality_sign === "\u2265") {
+                                inbetween = row[feature.name] >= value;
+                            } else {
+                                inbetween = row[feature.name] <= value;
+                            }
+                            if (!inbetween) {
+                                return false;
+                            }
+                        }
+
+                    }
+                    return inbetween;
+                } else { //if not, check if feature is included in row
+                    return criteria.get(feature).includes(row[feature.name]);
+                }
             });
         });
     }
@@ -133,7 +152,7 @@ class Data {
                             actual_rule = actual_rule.split(" then ");
                             // get second value of actual rule (that is the label) and remove all start and end spaces.
                             let label = actual_rule[1].trim();
-                            if (isNumeric(label)){
+                            if (isNumeric(label)) {
                                 label = parseInt(label);
                             }
                             let rule;
@@ -145,27 +164,41 @@ class Data {
 
                             let conditions = actual_rule[0]; // get first value, those are the conditions
                             conditions = conditions.split(" and "); // get each condition seperate
-                            for (let condition of conditions) {  // loop over all conditions
+
+                            for (let i = 0; i < conditions.length; i++) {  // loop over all conditions
+                                let condition = conditions[i];
+                                let contains_equality = false;
                                 let equality_sign = "=";
                                 let unicode_sign = "=";
-                                if (condition.includes('!=') || condition.includes('\u2260')){ //unicode for not equal
+                                if (condition.includes('!=') || condition.includes('\u2260')) { //unicode for not equal
                                     equality_sign = "!=";
                                     unicode_sign = '\u2260';
-                                } else if (condition.includes('>=') || condition.includes('\u2265') ){ //unicode for larger than or equal
+                                    contains_equality = true;
+                                } else if (condition.includes('>=') || condition.includes('\u2265')) { //unicode for larger than or equal
                                     equality_sign = ">=";
                                     unicode_sign = '\u2265';
-                                } else if (condition.includes('<=') || condition.includes('\u2264')){ //unicode for smaller than or equal
+                                    contains_equality = true;
+                                } else if (condition.includes('<=') || condition.includes('\u2264')) { //unicode for smaller than or equal
                                     equality_sign = "<=";
                                     unicode_sign = '\u2264';
-                                } else if (condition.includes('>')){
+                                    contains_equality = true;
+                                } else if (condition.includes('>')) {
                                     equality_sign = ">";
                                     unicode_sign = '>';
-                                } else if (condition.includes('<')){
+                                    contains_equality = true;
+                                } else if (condition.includes('<')) {
                                     equality_sign = "<";
                                     unicode_sign = '<';
-                                } else {
+                                    contains_equality = true
+                                } else if (condition.includes('=')) {
                                     equality_sign = "=";
                                     unicode_sign = '=';
+                                    contains_equality = true;
+                                }
+
+                                if (!contains_equality && that.metadata.containsAnd) { // condition has been unnecesarily splitted and should be merged with upcoming condition
+                                    conditions[i + 1] = condition + " and " + conditions[i + 1];
+                                    continue;
                                 }
 
                                 condition = condition.replace(unicode_sign, equality_sign);
@@ -183,7 +216,7 @@ class Data {
                         } else {
                             // remove else and all spaces at start and end
                             let label = actual_rule.replace("else ", "").trim();
-                            if (isNumeric(label)){
+                            if (isNumeric(label)) {
                                 label = parseInt(label);
                             }
                             let rule;
@@ -248,60 +281,6 @@ class Data {
 
 }
 
-/**
- * Stores data that will be used in the DAG for data flow between nodes.
- * {{number}} positiveRows List of integers that satisfy the feature in this node
- * {{number}} negativeRows List of integers that do not satisfy the feature in this node
- * {number} noOfPosRows integer length of the positive row array. (Note that this is not the same with true
- *                                     positives of the rule)
- * {number} noOfNegRows integer length of the negative row array. (Note that this is not the same with false
- *                                     positives of the rule)
- */
-class NodeData {
-    /**
-     * Stores data that will be used in the DAG for data flow between nodes.
-     */
-    constructor() {
-        this._positiveRows = [];
-        this._negativeRows = [];
-        this._noOfPosRows = 0;
-        this._noOfNegRows = 0;
-    }
-
-    //Getter and setter methods
-    get positiveRows() {
-        return this._positiveRows;
-    }
-
-    set positiveRows(value) {
-        this._positiveRows = value;
-    }
-
-    get negativeRows() {
-        return this._negativeRows;
-    }
-
-    set negativeRows(value) {
-        this._negativeRows = value;
-    }
-
-    get noOfPosRows() {
-        return this._noOfPosRows;
-    }
-
-    set noOfPosRows(value) {
-        this._noOfPosRows = value;
-    }
-
-    get noOfNegRows() {
-        return this._noOfNegRows;
-    }
-
-    set noOfNegRows(value) {
-        this._noOfNegRows = value;
-    }
-}
-
 class MetaData {
     /**
      * Create a map of the feature with key the feature name and the object feature as value
@@ -309,6 +288,7 @@ class MetaData {
     constructor() {
         // Set contains items of the class Feature
         this.features = new Map();
+        this.containsAnd = false;
     }
 
     /**
@@ -317,6 +297,9 @@ class MetaData {
      */
     addFeature(feature) {
         this.features.set(feature.name, feature);
+        if (!this.containsAnd) {
+            this.containsAnd = feature.name.includes("and");
+        }
     }
 
     /**
@@ -344,6 +327,10 @@ class Feature {
         this.name = name;
         this.values = new Set();
         this.isLabel = false;
+        this.isNumeric = true;
+        this.min = Number.MAX_SAFE_INTEGER;
+        this.max = Number.MIN_SAFE_INTEGER;
+        this.numberOfValues = 0;
     }
 
     /**
@@ -351,8 +338,32 @@ class Feature {
      * @param value
      */
     addValue(value) {
-        this.values.add(value)
+        this.values.add(value);
+        this.isNumeric = this.isNumerical();
+        if (this.isNumeric) {
+            if (value < this.min) {
+                this.min = value;
+            }
+            if (value > this.max) {
+                this.max = value;
+            }
+        } else {
+            this.min = NaN;
+            this.max = NaN;
+        }
+
+        this.numberOfValues = this.values.size;
     }
+
+    isNumerical() {
+        for (let value of this.values) {
+            if (parseFloat(value) !== value) {
+                return false;
+            }
+        }
+        return true;
+    }
+
 }
 
 class Rules {
@@ -405,7 +416,7 @@ class Rules {
                 ruleloop:
                     for (let rule of this.rules) {
                         for (let [feature, condition] of rule.conditions.entries()) {
-                            if (!condition.meetCondition(row[feature.name])){
+                            if (!condition.meetCondition(row[feature.name])) {
                                 continue ruleloop; // rule not satisfied so continue to next rule
                             }
                         }
@@ -492,30 +503,30 @@ class Rule {
     }
 }
 
-class Condition{
+class Condition {
     /**
      * @param {Feature} feature Feature to set a condition on
      * @param {string} equality ("===", ">=", ">", "<=", "<", "!==")
      * @param {string} unicode for equality
      * @param {string || float || integer} value Value that feature should be
      */
-    constructor(feature, equality, unicode, value){
+    constructor(feature, equality, unicode, value) {
         this.feature = feature;
         this.equality = equality;
         this.unicode_equality = unicode;
         this.value = value;
-        if (isNumeric(this.value)){
+        if (isNumeric(this.value)) {
             this.value = parseFloat(this.value);
         } else {
             this.unicode_equality = "";
         }
     }
 
-    meetCondition(value){
-        if (typeof value === "string" && this.equality !== "=" && this.equality !== "!="){
+    meetCondition(value) {
+        if (typeof value === "string" && this.equality !== "=" && this.equality !== "!=") {
             throw new Error(`Cannot compare a string with ${this.equality}.`);
         }
-        switch (this.equality){
+        switch (this.equality) {
             case "=":
                 return value === this.value;
             case "!=":

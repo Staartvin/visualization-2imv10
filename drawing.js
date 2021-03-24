@@ -2,6 +2,28 @@ rulesViewWidth = 4 / 6;
 controlViewWidth = 1 / 6;
 filterViewWidth = 1 / 6;
 
+darkModeColors = {
+    backgroundColor: `#121212`,
+    secondaryBackgroundColor: '#323232',
+    primaryColor: `#c9d1d9`,
+    secondaryColor: '#8b949e'
+}
+
+lightModeColors = {
+    backgroundColor: `#ffffff`,
+    secondaryBackgroundColor: '#cccccc',
+    primaryColor: `#121212`,
+    secondaryColor: '#323232'
+}
+
+backgroundColor = lightModeColors["backgroundColor"];
+secondaryBackgroundColor = lightModeColors["secondaryBackgroundColor"];
+primaryColor = lightModeColors["primaryColor"];
+secondaryColor = lightModeColors["secondaryColor"];
+
+darkmode = false;
+
+
 class RulesView {
 
     /**
@@ -52,17 +74,31 @@ class RulesView {
      * @type {{orange: string, red: string, pink: string, green: string, gray: string, blue: string, olive: string, purple: string, brown: string, cyan: string}}
      */
     static possibleColors = {
-        blue: "#1F77B4",
-        orange: "#FF7F0E",
-        green: "#2CA02C",
-        red: "#D62728",
-        purple: "#9467BD",
-        brown: "#8C564B",
-        pink: "#E377C2",
-        gray: "#7F7F7F",
-        olive: "#BCBD22",
-        cyan: "#17BECF"
-    }
+        blue: "#1976d2",
+        orange: "#f57c00",
+        green: "#388e3c",
+        red: "#d32f2f",
+        purple: "#7b1fa2",
+        brown: "#5d4037",
+        pink: "#d81b60",
+        gray: "#616161",
+        olive: "#afb42b",
+        cyan: "#0097a7"
+    };
+
+    static possibleDarkColors = {
+        blue: "#90caf9",
+        orange: "#ffcc80",
+        green: "#a5d6a7",
+        red: "#ef9a9a",
+        purple: "#ce93d8",
+        brown: "#bcaaa4",
+        pink: "#f48fb1",
+        gray: "#eeeeee",
+        olive: "#e6ee9c",
+        cyan: "#80deea"
+    };
+
 
     static attributeColumnHeight = 40;
     static attributeColumnWidth = 40;
@@ -102,7 +138,7 @@ class RulesView {
                 self.p.cursor('default');
             }
 
-            self.p.background(255);
+            self.p.background(backgroundColor);
 
             // Don't draw anything if we have no features.
             if (RulesView.featureOrder.length === 0) {
@@ -141,9 +177,12 @@ class RulesView {
     }
 
     drawBorder() {
+        this.p.push();
+        this.p.fill(backgroundColor);
         this.p.stroke("#FFC114");
         this.p.strokeWeight(4);
         this.p.rect(0, 0, this.p.width, this.p.height);
+        this.p.pop();
 
         // Draw title of structural view
         this.p.noStroke();
@@ -169,7 +208,7 @@ class RulesView {
     drawFeatureLabels() {
         let offset = 1;
         // Determine the width of a column
-        let widthPerLabel = (this.p.width - 2 * this.xMargin) / (RulesView.featureOrder.length + .5); //also draw incoming edges
+        let widthPerLabel = (this.p.width - 2 * this.xMargin) / (RulesView.featureOrder.length + 1); //also draw incoming edges
         // Set a fixed height for the columns
         RulesView.attributeColumnHeight = this.p.height / 25;
         let heightPerLabel = RulesView.attributeColumnHeight;
@@ -178,9 +217,6 @@ class RulesView {
 
         // Create new temporary style
         this.p.push();
-
-        this.p.stroke(200);
-        this.p.strokeWeight(0.5);
         this.p.textAlign(this.p.CENTER, this.p.CENTER);
         this.p.textSize(Math.min(25, heightPerLabel / 2));
 
@@ -194,7 +230,8 @@ class RulesView {
                 let x = this.xMargin + ((index + offset) * widthPerLabel); //set off by one for incoming edge
                 let y = this.yOffset;
                 let yEnd = this.yOffset + this.p.height;
-
+                this.p.stroke(secondaryBackgroundColor);
+                this.p.strokeWeight(0.5);
                 // Draw column for label
                 this.p.line(x, y, x, yEnd);
             }
@@ -202,22 +239,46 @@ class RulesView {
             this.p.push();
 
             let x = this.xMargin + ((index + offset) * widthPerLabel) + 10; //set off by one for incoming edge
-            let y = this.yOffset + heightPerLabel / 2;
+            let y = this.yOffset + heightPerLabel;
 
 
             //show icon to indicate attribute is selected
             if (RulesView.clickedFeatures.get(feature)) {
                 this.p.stroke(0, 92, 71);
                 this.p.strokeWeight(2);
-                this.p.fill(255);
+                this.p.fill(backgroundColor);
                 this.p.triangle(x - 5, y - 5, x + 5, y - 5, x, y + 5);
             }
-            this.p.strokeWeight(0);
-            this.p.fill(0);
+            this.p.strokeWeight(primaryColor);
+            this.p.fill(primaryColor);
             x = this.xMargin + ((index + offset) * widthPerLabel) + widthPerLabel / 2; //set off by one for incoming edge
 
             // Now draw feature name in the attribute box
-            this.p.text(feature.name, x, y);
+
+            // P5 works a bit weird with rotations. Objects rotate with respect to the origin
+            // // This means that I have to place the text on the origin, rotate it and then translate it to where I want it to go.
+            // this.p.push();
+            // this.p.rotate(-this.p.HALF_PI/2);
+            // this.p.textAlign(this.p.CENTER, this.p.CENTER);
+            // this.p.translate(x - widthPerLabel/2, this.yOffset + heightPerLabel*2);
+            // this.p.text(feature.name, 0, 0);
+            // this.p.translate(0, 0);
+            // // this.p.rotate(degreeToRadians(0));
+            // this.p.pop();
+
+            this.p.push();
+            // Draw the names of the features on top
+            // Make label feature bold
+            this.p.textSize(12);
+            this.p.textAlign(this.p.LEFT, this.p.CENTER);
+            // P5 works a bit weird with rotations. Objects rotate with respect to the origin
+            // This means that I have to place the text on the origin, rotate it and then translate it to where I want it to go.
+            this.p.translate(x, 1.25 * this.yOffset + heightPerLabel);
+            this.p.rotate(degreeToRadians(-90));
+            this.p.text(feature.name, 0, 0);
+            this.p.pop();
+
+
             this.p.pop();
 
             index++;
@@ -233,11 +294,11 @@ class RulesView {
     drawRules() {
         let offset = 1;
         // Determine the width of a column
-        let columnWidth = (this.p.width - 2 * this.xMargin) / (RulesView.featureOrder.length + 0.5); //leave room for incoming edge
+        let columnWidth = (this.p.width - 2 * this.xMargin) / (RulesView.featureOrder.length + 1); //leave room for incoming edge
         RulesView.attributeColumnWidth = columnWidth;
         // Set a fixed height for the columns
         let columnHeight = (this.p.height - 2 * this.yOffset - RulesView.attributeColumnHeight)
-            / Math.min(RulesView.rules.rules.length, 30);
+            / 30;
 
         // Set the first y to be at the bottom of the first row.
         let y = this.yOffset + RulesView.attributeColumnHeight + columnHeight;
@@ -250,7 +311,7 @@ class RulesView {
         let ruleIndex = 0;
         let number_of_not_shown_rules = 0;
 
-        var last_x;
+        let last_x;
 
         // For each rule, draw a row.
         loop1:
@@ -267,14 +328,14 @@ class RulesView {
                 for (let [feature, clicked] of RulesView.clickedFeatures.entries()) {
                     if (clicked) {
                         if (!rule.conditions.has(feature)) {
-                            let x = this.xMargin + columnWidth + number_of_not_shown_rules * 15;
-                            let color = this.p.color(RulesView.outcomeColors.get(rule.label));
-                            color.setAlpha(100);
-                            this.p.fill(color);
-
-                            this.p.strokeWeight(0);
-                            number_of_not_shown_rules += 1;
-                            this.p.circle(x, y, 10); //draw circle for decision node
+                            // let x = this.xMargin + columnWidth + number_of_not_shown_rules * 15;
+                            // let color = this.p.color(RulesView.outcomeColors.get(rule.label));
+                            // color.setAlpha(100);
+                            // this.p.fill(color);
+                            //
+                            // this.p.strokeWeight(0);
+                            // number_of_not_shown_rules += 1;
+                            // this.p.circle(x, y, 10); //draw circle for decision node
                             continue loop1; //continue to the next rule
                         }
                     }
@@ -317,10 +378,11 @@ class RulesView {
                     this.p.strokeWeight(0); // we want no stroke on the text or circle
                     let featureIndex = RulesView.featureOrder.indexOf(feature); //get location of feature
 
-                    let x = this.xMargin + (featureIndex + offset) * columnWidth + columnWidth / 10; //set off by a half (since incoming edge)
+                    let x = this.xMargin + (featureIndex + offset) * columnWidth + columnWidth / 5; //set off by a half (since incoming edge)
                     this.p.fill(RulesView.outcomeColors.get(rule.label)); //set fill color of circle
                     this.p.circle(x, y, 10); //draw circle for decision node
-                    this.p.fill(50); // set text color
+                    this.p.fill(secondaryColor); // set text color
+                    this.p.textSize(10);
                     this.p.text(value, x + 5, y - 2); //draw the text
                 }
                 this.p.strokeWeight(0);
@@ -331,11 +393,7 @@ class RulesView {
                 let remainingWidth = 1; // keep track of percentage of data not satisfied by rules
                 for (const [label, color] of RulesView.outcomeColors.entries()) {
                     let percentageWidth = 0;
-                    if (label === rule.label) { //are true positives
-                        percentageWidth = rule.truePositives / RulesView.determineNumberOfCases(); //Determine percentage TODO for multiple labels
-                    } else {
-                        percentageWidth = rule.falsePositives / RulesView.determineNumberOfCases(); //TODO for multiple labels
-                    }
+                    percentageWidth = rule.perLabelNumberOfInstances.get(label) / RulesView.determineNumberOfCases(); //Determine percentage TODO for multiple labels
                     this.p.fill(color);  //set the fill of the label
                     this.p.rect(tempX + (percentageWidth * totalWidth) / 2, y, percentageWidth * totalWidth, columnHeight * .8); // draw rectangle
                     tempX += percentageWidth * totalWidth; //determine new locations
@@ -343,24 +401,31 @@ class RulesView {
                 }
 
                 //draw rectangle for non-satisfied data
-                this.p.fill(230);
+                this.p.fill(secondaryBackgroundColor);
                 this.p.rect(tempX + (remainingWidth * totalWidth) / 2, y, remainingWidth * totalWidth, columnHeight * .8);
 
+                // draw support number in rectangle
+                this.p.push();
+                this.p.textAlign(this.p.RIGHT, this.p.CENTER);
+                this.p.fill(primaryColor);
+
+                this.p.text(rule.support.toFixed(0), this.xMargin + totalWidth - 5, y);
+                this.p.pop();
                 // draw small rectangle on the left to indicate start of rule
                 let x = this.xMargin + .95 * columnWidth;
                 this.p.strokeWeight(1);
                 this.p.stroke(150);
-                this.p.fill(255);
+                this.p.fill(backgroundColor);
                 this.p.rect(x, y, 5, columnHeight / 2 + 5, 2);
 
                 // Draw the outcome label
                 let featureIndex = RulesView.featureOrder.length - 1;
-                x = this.xMargin + (featureIndex + offset) * columnWidth + columnWidth / 4; //set off by .5
+                x = this.xMargin + (featureIndex + offset + .6) * columnWidth; //set off by .5
                 let height = 0.8 * columnHeight;
-                let width = 0.8 * columnWidth / 2;
+                let width = 0.95 * columnWidth;
                 // for squircles, we need to draw the background first with the smallest area (determined by ratio)
                 if (ratio > 0.5) {
-                    this.p.fill(255); // set fill color of rectangle //draw false positives
+                    this.p.fill(backgroundColor); // set fill color of rectangle //draw false positives
                 } else {
                     this.p.fill(RulesView.outcomeColors.get(rule.label)); // set fill color true positives // true postives
                 }
@@ -392,7 +457,7 @@ class RulesView {
                     let tempX = x - width / 2 + width * ratio; //set x to correct x for CORNER
                     let tempWidth = width * (1 - ratio); //find relative part of width
                     let tempY = y - height / 2;
-                    this.p.fill(255);
+                    this.p.fill(backgroundColor);
                     if (ratio > .15) {
                         this.p.rect(tempX, tempY, tempWidth, height, 0, 20, 20, 0);
                     } else if (ratio > .10) {
@@ -405,6 +470,14 @@ class RulesView {
                 }
                 this.p.pop();
 
+                // draw confidence number in rectangle
+                // this.p.push();
+                // this.p.textAlign(this.p.CENTER, this.p.CENTER);
+                // this.p.fill(0);
+                // this.p.strokeWeight(0);
+                // this.p.text(rule.confidence.toFixed(2) + "%", x, y);
+                // this.p.pop();
+
                 // Increase Y so we go down to the next line
                 y += columnHeight;
                 ruleIndex++;
@@ -414,7 +487,7 @@ class RulesView {
         console.log(`Showing ${RulesView.rules.rules.length} rules!`);
 
         //Print title for support
-        this.p.fill(0);
+        this.p.fill(primaryColor);
         this.p.strokeWeight(0);
 
         this.p.push();
@@ -422,10 +495,10 @@ class RulesView {
         this.p.textStyle(this.p.BOLD);
         let x = this.xMargin;
         y = this.yOffset + RulesView.attributeColumnHeight + columnHeight - 15;
-        this.p.text(`Support`, x, y);
+        this.p.text(`Support (%)`, x, y);
 
-
-        x = last_x - 40;
+        this.p.textAlign(this.p.CENTER);
+        x = last_x;
         y = this.yOffset + RulesView.attributeColumnHeight + columnHeight - 15;
         this.p.text(`Confidence`, x, y);
 
@@ -434,9 +507,9 @@ class RulesView {
 
         //print number of rules shown
         this.p.strokeWeight(0);
-        this.p.textSize(Math.min(15, columnHeight * 3 / 5));
+        this.p.textSize(Math.min(10, columnHeight * 3 / 5));
         x = this.xMargin;
-        y = this.yOffset + RulesView.attributeColumnHeight + columnHeight - 70;
+        y = 25;
         this.p.text(`${ruleIndex}/${RulesView.rules.rules.length} rules shown.`, x, y);
 
         // Remove the temp style
@@ -455,7 +528,10 @@ class RulesView {
         // Try to assign colors to the outcomes.
         this.assignColorsToOutcomes();
 
+
         this.fillClickedFeatures();
+
+        FilterView.determineMaxNumberOfValues();
     }
 
 
@@ -500,7 +576,11 @@ class RulesView {
             let index = 0;
             // Loop over the feature that has the outcomes and assign a color to each outcome value
             for (let value of outcomeFeature.values) {
-                RulesView.outcomeColors.set(value, Object.keys(RulesView.possibleColors)[index]);
+                if (darkmode) {
+                    RulesView.outcomeColors.set(value, Object.values(RulesView.possibleDarkColors)[index]);
+                } else {
+                    RulesView.outcomeColors.set(value, Object.values(RulesView.possibleColors)[index]);
+                }
                 index++;
             }
         }
@@ -518,6 +598,7 @@ class RulesView {
 class ControlView {
 
     static features = [];
+    static darkModeCheckBox = null;
 
     constructor(p) {
         this._p = null;
@@ -529,31 +610,67 @@ class ControlView {
 
         return function () {
             // We draw an initial canvas.
-            let canvas = self.p.createCanvas(self.p.windowWidth * controlViewWidth, self.p.windowHeight);
-            canvas.background(255);
+            let canvas = self.p.createCanvas(self.p.windowWidth * controlViewWidth, 3 / 5 * self.p.windowHeight);
+            canvas.background(backgroundColor);
             canvas.position(0, 0);
 
-            self.drawBorder();
+            self.setUpCheckBoxDarkMode();
         }
+    }
+
+    setUpCheckBoxDarkMode() {
+        let checkbox = this.p.createCheckbox();
+        checkbox.position(90, 60);
+        //Add a function to when the checkboxes are clicked
+        checkbox.changed(this.switchDarkMode);
+        ControlView.darkModeCheckBox = checkbox;
+    }
+
+    switchDarkMode() {
+        darkmode = ControlView.darkModeCheckBox.checked();
+        let color_map = lightModeColors;
+        if (darkmode) {
+            color_map = darkModeColors
+        }
+        backgroundColor = color_map["backgroundColor"];
+        secondaryBackgroundColor = color_map["secondaryBackgroundColor"];
+        primaryColor = color_map["primaryColor"];
+        secondaryColor = color_map["secondaryColor"];
+
+        RulesView.assignColorsToOutcomes();
     }
 
     get draw() {
         let self = this;
         return function () {
-
+            self.drawBorder();
+            self.drawText();
         }
     }
 
     drawBorder() {
+        this.p.push();
+        this.p.fill(backgroundColor);
         this.p.stroke("#9AA6AB");
         this.p.strokeWeight(4);
         this.p.rect(0, 0, this.p.width, this.p.height);
+        this.p.pop();
 
         // Draw title of structural view
         this.p.noStroke();
         this.p.textSize(32);
         this.p.textAlign(this.p.CENTER);
+        this.p.fill(primaryColor);
         this.p.text("Control view", this.p.width / 2, 30);
+    }
+
+    drawText() {
+        this.p.push();
+        this.p.textSize(12);
+        this.p.fill(primaryColor);
+        this.p.textAlign(this.p.LEFT, this.p.CENTER);
+        this.p.text("Dark mode:", 25, 70);
+        this.p.pop();
     }
 
     get p() {
@@ -574,6 +691,7 @@ class ControlView {
 class FilterView {
 
     static xMargin = 25;
+    static yMargin = 75;
     static xSliderMargin = 110;
     static supportVal = 0;
     static confVal = 0;
@@ -638,6 +756,14 @@ class FilterView {
      */
     static newFiltersSelected = false;
 
+    static selectedFeatureIsNumeric = true;
+
+    static minInput = null;
+
+    static maxInput = null;
+
+    static maxNumberOfValues = 0;
+
 
     constructor(p) {
         this._p = null;
@@ -652,8 +778,8 @@ class FilterView {
 
         return function () {
             // We draw an initial canvas.
-            let canvas = self.p.createCanvas(self.p.windowWidth * filterViewWidth, self.p.windowHeight );
-            canvas.background(255);
+            let canvas = self.p.createCanvas(self.p.windowWidth * filterViewWidth, self.p.windowHeight);
+            canvas.background(backgroundColor);
             canvas.position((controlViewWidth + rulesViewWidth) * self.p.windowWidth, 0);
             FilterView.canvas = canvas;
 
@@ -673,7 +799,7 @@ class FilterView {
     get draw() {
         let self = this;
         return function () {
-            self.p.background(255);
+            self.p.background(backgroundColor);
             self.drawBorder();
             self.drawTexts();
             self.drawFilterBoxes();
@@ -684,9 +810,12 @@ class FilterView {
      * Draw border of the view
      */
     drawBorder() {
+        this.p.push();
+        this.p.fill(backgroundColor);
         this.p.stroke("#181818");
         this.p.strokeWeight(4);
         this.p.rect(0, 0, this.p.width, this.p.height);
+        this.p.pop();
     }
 
 
@@ -697,6 +826,7 @@ class FilterView {
         // Draw title of filter view
         this.p.noStroke();
         this.p.textSize(32);
+        this.p.fill(primaryColor);
         this.p.textAlign(this.p.CENTER);
         this.p.text("Filter view", this.p.width / 2, 30);
 
@@ -704,12 +834,12 @@ class FilterView {
         this.p.textAlign(this.p.LEFT, this.p.CENTER);
         this.p.textSize(25);
 
-        this.p.text('Filter the rules', FilterView.xMargin, FilterView.canvas.height - 75);
-        FilterView.p5.text('Filter the data', FilterView.xMargin, FilterView.canvas.y + FilterView.canvas.height/2 - 15);
+        this.p.text('Filter the rules', FilterView.xMargin, FilterView.yMargin);
+        FilterView.p5.text('Filter the data', FilterView.xMargin, FilterView.yMargin + 100);
 
         this.p.textSize(15);
         this.p.textStyle(this.p.BOLD);
-        FilterView.p5.text('Feature:', FilterView.xMargin, FilterView.canvas.y + FilterView.canvas.height/2 + 10);
+        FilterView.p5.text('Feature:', FilterView.xMargin, FilterView.yMargin + 132);
         this.p.textStyle(this.p.NORMAL);
         this.p.textSize(15);
         this.p.text('Support', FilterView.xMargin, FilterView.sliderSupport.y + FilterView.sliderSupport.height / 2);
@@ -718,11 +848,22 @@ class FilterView {
         let x_slider = FilterView.xSliderMargin + FilterView.sliderConfidence.width + 10;
         let y_slider = FilterView.sliderSupport.y + FilterView.sliderSupport.height / 2;
 
-        this.p.text('(' + FilterView.supportVal + '%)', x_slider, y_slider)
+        this.p.text('(' + FilterView.supportVal + '%)', x_slider, y_slider);
 
         x_slider = FilterView.xSliderMargin + FilterView.sliderConfidence.width + 10;
         y_slider = FilterView.sliderConfidence.y + FilterView.sliderConfidence.height / 2;
-        this.p.text('(' + FilterView.confVal + '%)', x_slider, y_slider)
+        this.p.text('(' + FilterView.confVal + '%)', x_slider, y_slider);
+
+        if (FilterView.selectedFeatureIsNumeric) {
+            this.p.push();
+            this.p.fill(primaryColor);
+            this.p.textAlign(this.p.LEFT, this.p.CENTER);
+            if (FilterView.minInput !== null) {
+                this.p.text('Min:', FilterView.xMargin, FilterView.minInput.y + FilterView.minInput.height / 2);
+                this.p.text('Max:', 2 * FilterView.xMargin + this.p.textWidth('Min: ') + FilterView.minInput.width, FilterView.minInput.y + FilterView.minInput.height / 2);
+            }
+            this.p.pop();
+        }
     }
 
     /**
@@ -739,7 +880,12 @@ class FilterView {
         //create a new style
         this.p.push();
         //set start values
-        let Y = 60;
+
+        let Y = 270;
+        if (FilterView.maxNumberOfValues > 0) {
+            Y = 225 + FilterView.maxNumberOfValues / 2 * 25 + 20;
+        }
+
         let Y_step = 30;
         let X = FilterView.xMargin;
 
@@ -755,14 +901,14 @@ class FilterView {
             this.p.text(feature.name, FilterView.xMargin, Y);
             Y += Y_step / 2;
             for (let value of values) {
-                let text_in_box = 'X ' + value;
+                let text_in_box = value + '  \u2716'; //unicode for ✖
                 if (X + this.p.textWidth(text_in_box) + 5 + 20 >= this.p.width) {
                     X = FilterView.xMargin;
                     Y += Y_step;
                 }
                 //set style for rectangle
-                this.p.fill(240);
-                this.p.stroke(220);
+                this.p.fill(secondaryBackgroundColor);
+                this.p.stroke(secondaryBackgroundColor);
                 this.p.strokeWeight(1);
                 this.p.rectMode(FilterView.p5.CORNER);
                 this.p.rect(X, Y, this.p.textWidth(text_in_box) + 5, 20, 3);
@@ -770,8 +916,8 @@ class FilterView {
                 let filterBox = new FilterBox(feature, value, X, Y, this.p.textWidth(text_in_box) + 5, 20);
                 //set style for text in rectangle
                 this.p.textStyle(this.p.NORMAL);
-                this.p.fill(0);
-                this.p.strokeWeight(0);
+                this.p.fill(primaryColor);
+                this.p.strokeWeight(primaryColor);
                 this.p.textAlign(FilterView.p5.CENTER);
                 this.p.text(text_in_box, X + (this.p.textWidth(text_in_box) + 5) / 2, Y + 11);
                 X += this.p.textWidth(text_in_box) + 5 + 20;
@@ -830,8 +976,8 @@ class FilterView {
     setupSliders() {
         FilterView.sliderSupport = this.p.createSlider(0, 100, 0);
         FilterView.sliderConfidence = this.p.createSlider(0, 100, 0);
-        FilterView.sliderSupport.position(FilterView.canvas.x + FilterView.xSliderMargin, FilterView.canvas.y + FilterView.canvas.height - 50);
-        FilterView.sliderConfidence.position(FilterView.canvas.x + FilterView.xSliderMargin, FilterView.canvas.y + FilterView.canvas.height - 25);
+        FilterView.sliderSupport.position(FilterView.canvas.x + FilterView.xSliderMargin, FilterView.canvas.y + FilterView.yMargin + 25);
+        FilterView.sliderConfidence.position(FilterView.canvas.x + FilterView.xSliderMargin, FilterView.canvas.y + FilterView.yMargin + 50);
 
         FilterView.sliderSupport.input(this.supportSliderOnChange);
         FilterView.sliderConfidence.input(this.confSliderOnChange);
@@ -860,7 +1006,7 @@ class FilterView {
      */
     static setupSelector() {
         let sel = FilterView.p5.createSelect();
-        sel.position(FilterView.canvas.x + FilterView.xMargin + FilterView.p5.textWidth("Feature:") + 10, FilterView.canvas.y + FilterView.canvas.height/2);
+        sel.position(FilterView.canvas.x + FilterView.xMargin + FilterView.p5.textWidth("Feature:") + 10, FilterView.yMargin + 120);
         // add all features to the selector
         for (let feature of RulesView.featureOrder) {
             sel.option(feature.name);
@@ -885,6 +1031,16 @@ class FilterView {
         for (let checkbox of FilterView.checkboxes) {
             checkbox.remove();
         }
+
+        if (FilterView.minInput !== null) {
+            FilterView.minInput.remove();
+            FilterView.minInput = null;
+        }
+
+        if (FilterView.maxInput !== null) {
+            FilterView.maxInput.remove();
+            FilterView.maxInput = null;
+        }
         //Empty the list of checkboxes
         FilterView.checkboxes = [];
 
@@ -897,29 +1053,58 @@ class FilterView {
             }
         }
 
-        let columns = 2;
-        let Y = FilterView.canvas.y + FilterView.canvas.height/2;
-        let Y_step = 25;
-        let X_step = (FilterView.canvas.width - 50) / columns;
-        let index = 0;
-        for (let value of correct_feature.values) {
-            //Only draw as much items as columns on a row
-            if (index % columns === 0) {
-                Y += Y_step;
+        if (correct_feature.isNumeric) {
+            let minText = correct_feature.min;
+            let maxText = correct_feature.max;
+            for (let condition of FilterView.selectedAttributes.get(correct_feature)) {
+                if (condition.includes("\u2265")) {
+                    minText = condition.replace('\u2265', "");
+                    minText = parseFloat(minText);
+                }
+                if (condition.includes("\u2264")) {
+                    maxText = condition.replace('\u2264', "");
+                    maxText = parseFloat(maxText);
+                }
             }
-            let checked = true;
-            // set checked to false if not in the selected Attributes list
-            if (FilterView.selectedAttributes.get(correct_feature).indexOf(value) === -1) {
-                checked = false;
+
+            let minInput = FilterView.p5.createInput(minText);
+            minInput.size(FilterView.p5.width / 2 - FilterView.p5.textWidth('Min: ') - FilterView.p5.textWidth('Max: '));
+
+            minInput.position(FilterView.canvas.x + FilterView.xMargin + FilterView.p5.textWidth('Min: '), FilterView.canvas.y + 225);
+            let maxInput = FilterView.p5.createInput(maxText);
+            maxInput.size(FilterView.p5.width / 2 - FilterView.p5.textWidth('Min: ') - FilterView.p5.textWidth('Max: '));
+            maxInput.position(minInput.x + minInput.width + FilterView.p5.textWidth('Max: ') + FilterView.xMargin, FilterView.canvas.y + 225);
+
+            FilterView.minInput = minInput;
+            FilterView.maxInput = maxInput;
+            minInput.input(FilterView.myInputEvent);
+            maxInput.input(FilterView.myInputEvent);
+
+        } else { //draw checkboxes if values are not numerical
+            let columns = 2;
+            let Y = FilterView.canvas.y + 200;
+            let Y_step = 25;
+            let X_step = (FilterView.canvas.width - 50) / columns;
+            let index = 0;
+            for (let value of correct_feature.values) {
+                //Only draw as much items as columns on a row
+                if (index % columns === 0) {
+                    Y += Y_step;
+                }
+                let checked = true;
+                // set checked to false if not in the selected Attributes list
+                if (FilterView.selectedAttributes.get(correct_feature).indexOf(value) === -1) {
+                    checked = false;
+                }
+                //Create new checkboxes and position them
+                let checkbox = FilterView.p5.createCheckbox(value, checked);
+                checkbox.position(FilterView.canvas.x + FilterView.xMargin + (index % columns) * X_step, Y);
+                //Add a function to when the checkboxes are clicked
+                checkbox.changed(FilterView.myCheckedEvent);
+                //Add checkbox to list
+                FilterView.checkboxes.push(checkbox);
+                index += 1;
             }
-            //Create new checkboxes and position them
-            let checkbox = FilterView.p5.createCheckbox(value, checked);
-            checkbox.position(FilterView.canvas.x + FilterView.xMargin + (index % columns) * X_step, Y);
-            //Add a function to when the checkboxes are clicked
-            checkbox.changed(FilterView.myCheckedEvent);
-            //Add checkbox to list
-            FilterView.checkboxes.push(checkbox);
-            index += 1;
         }
     }
 
@@ -942,7 +1127,7 @@ class FilterView {
             if (checkbox.checked()) {
                 // add label if label not in list yet
                 if (FilterView.selectedAttributes.get(correct_feature).indexOf(label) === -1) {
-                    FilterView.selectedAttributes.get(correct_feature).push(label)
+                    FilterView.selectedAttributes.get(correct_feature).push(label);
                 }
             } else {
                 // remove label if label in list
@@ -957,28 +1142,47 @@ class FilterView {
         FilterView.newFiltersSelected = true;
     }
 
+    static myInputEvent() {
+        let feature_name = FilterView.selectBox.value();
+        let correct_feature = null;
+        for (let feature of RulesView.featureOrder) {
+            if (feature.name === feature_name) {
+                correct_feature = feature;
+                break;
+            }
+        }
+
+        let min_value = FilterView.minInput.value();
+        let max_value = FilterView.maxInput.value();
+
+        // make list empty again
+        FilterView.selectedAttributes.set(correct_feature, []);
+
+        if (parseFloat(min_value) !== correct_feature.min) {
+            FilterView.selectedAttributes.get(correct_feature).push(`\u2265 ${min_value}`);
+        }
+        if (parseFloat(max_value) !== correct_feature.max) {
+            FilterView.selectedAttributes.get(correct_feature).push(`\u2264 ${max_value}`);
+        }
+
+        FilterView.filterData();
+        //Set to true such that the filterboxes are updated
+        FilterView.newFiltersSelected = true;
+    }
+
     /**
      * Method to filter the data of the all_data object
      */
     static filterData() {
         let map = new Map();
         for (let [feature, values] of FilterView.selectedAttributes.entries()) {
-            // no item is selected, so all items are allowed
-            let criteria = "";
+            // only add those items that are selected
             if (values.length > 0) {
-                for (let value of values) {
-                    //| is to indicate or between values
-                    //encodeUri to make sure all needed characters are escaped
-                    criteria += encodeURI(value) + "|";
-                }
-                //remove last character (one | too many)
-                criteria = criteria.slice(0, -1);
-                //Add to the map
-                map.set(feature.name, criteria);
+                map.set(feature, values);
             }
         }
         //Update
-        all_data.filtered_data = all_data.filterDataRegEx(map);
+        all_data.filtered_data = all_data.filterData(map);
         all_data.rules.calculateSupportAndConf(all_data.filtered_data);
         FilterView.updateFilteredRules();
     }
@@ -1011,6 +1215,14 @@ class FilterView {
         });
     }
 
+    static determineMaxNumberOfValues() {
+        for (let feature of RulesView.featureOrder) {
+            if (!feature.isNumeric) {
+                FilterView.maxNumberOfValues = Math.max(FilterView.maxNumberOfValues, feature.numberOfValues);
+            }
+        }
+    }
+
     get p() {
         return this._p;
     }
@@ -1034,9 +1246,9 @@ class InfoView {
 
         return function () {
             // We draw an initial canvas.
-            let canvas = self.p.createCanvas(self.p.windowWidth * filterViewWidth, self.p.windowHeight * 1 / 5);
-            canvas.background(255);
-            canvas.position(0, self.p.windowHeight * 4 / 5);
+            let canvas = self.p.createCanvas(self.p.windowWidth * filterViewWidth, self.p.windowHeight * 2 / 5);
+            canvas.background(backgroundColor);
+            canvas.position(0, self.p.windowHeight * 3 / 5);
 
 
         }
@@ -1045,7 +1257,7 @@ class InfoView {
     get draw() {
         let self = this;
         return function () {
-            self.p.background(255);
+            self.p.background(backgroundColor);
             self.drawBorder();
             self.drawPill();
             self.drawLegend();
@@ -1053,22 +1265,25 @@ class InfoView {
     }
 
     drawBorder() {
+        this.p.push();
+        this.p.fill(backgroundColor);
         this.p.stroke("#272727");
         this.p.strokeWeight(4);
         this.p.rect(0, 0, this.p.width, this.p.height);
+        this.p.pop();
     }
 
     /**
      * Draw pill for legend
      */
-    drawPill(){
+    drawPill() {
         this.p.push();
         let ratio = 0.5;
         let outcomeFeature = RulesView.featureOrder.find(feature => feature.isLabel);
         //only draw if outcomeFeature is defined
-        if (typeof outcomeFeature !== 'undefined'){
+        if (typeof outcomeFeature !== 'undefined') {
             let label = '';
-            for (let value of outcomeFeature.values){
+            for (let value of outcomeFeature.values) {
                 label = value;
                 break;
             }
@@ -1079,9 +1294,9 @@ class InfoView {
             this.p.strokeWeight(1); //make sure stroke is drawn
 
             //set location and width
-            let x = (this.p.width)/2;
+            let x = (this.p.width) / 2;
             let y = 60;
-            let width = this.p.width-100;
+            let width = this.p.width - 100;
             //drae colored part of pull
             this.p.rectMode(this.p.CENTER);
             this.p.rect(x, y, width, 30, 50);
@@ -1089,24 +1304,24 @@ class InfoView {
             //draw white part of pill
             let tempX = x + width / 4; //set x to correct x for CORNER
             let tempWidth = width * ratio; //find relative part of width
-            this.p.fill(255);
+            this.p.fill(backgroundColor);
             this.p.rect(tempX, y, tempWidth, 30, 0, 50, 50, 0);
 
             //fill with text
             this.p.textAlign(this.p.LEFT);
-            this.p.fill(255);
+            this.p.fill(backgroundColor);
             this.p.strokeWeight(0);
             this.p.textSize(12);
-            x = (this.p.width)*1/4;
-            this.p.text('Correctly', x, y-2);
-            this.p.text('classified',x, y+10);
+            x = (this.p.width) * 1 / 4;
+            this.p.text('Correctly', x, y - 2);
+            this.p.text('classified', x, y + 10);
 
             this.p.fill(color);
-            x = (this.p.width)*1/2+1/8*width;
-            this.p.text('Incorrectly', x, y-2);
-            this.p.text('classified',x+2, y+10);
+            x = (this.p.width) * 1 / 2 + 1 / 8 * width;
+            this.p.text('Incorrectly', x, y - 2);
+            this.p.text('classified', x + 2, y + 10);
 
-            this.p.fill(0);
+            this.p.fill(primaryColor);
             this.p.textSize(25);
             this.p.textAlign(this.p.LEFT);
             this.p.text("Legend", 25, 30);
@@ -1117,15 +1332,15 @@ class InfoView {
     /**
      * Draw legend of labels
      */
-    drawLegend(){
+    drawLegend() {
         // Draw labels outcome
         let x = 25;
         let y = 115 - 15;
         this.p.push();
         // Draw the text
         this.p.textAlign(this.p.LEFT);
-        this.p.fill(0);
-        this.p.strokeWeight(0);
+        this.p.fill(primaryColor);
+        this.p.strokeWeight(primaryColor);
         this.p.textSize(20);
         let title = "Labels:";
         this.p.text(title, 25, 115);
@@ -1143,12 +1358,12 @@ class InfoView {
                 this.p.rectMode(this.p.CORNER);
                 this.p.textSize(20);
                 this.p.fill(RulesView.outcomeColors.get(value));
-                this.p.rect(x+this.p.textWidth(title) + 15, y, 15, 15);
+                this.p.rect(x + this.p.textWidth(title) + 15, y, 15, 15);
 
-                this.p.fill(0);
+                this.p.fill(primaryColor);
                 this.p.textSize(15);
                 this.p.textAlign(this.p.LEFT);
-                this.p.text(value, x+this.p.textWidth(title) + 15 + 40, y + 10);
+                this.p.text(value, x + this.p.textWidth(title) + 15 + 40, y + 10);
                 this.p.pop();
                 y += 20;
             }
@@ -1219,5 +1434,16 @@ class FilterBox {
     }
 }
 
+function degreeToRadians(degrees) {
+    let pi = Math.PI;
+    return degrees * (pi / 180);
+}
 
+function hex_code_to_luminance(hex_code) {
+    let R = parseInt(hex_code.substring(1, 3), 16);
+    let G = parseInt(hex_code.substring(3, 5), 16);
+    let B = parseInt(hex_code.substring(5, 7), 16);
+
+    return 0.2126 * R + 0.7152 * G + 0.0722 * B
+}
 

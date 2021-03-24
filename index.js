@@ -1,5 +1,5 @@
 // Load data files
-const all_data = new Data("data/Dataset 2/Data.csv", "data/Dataset 2/Rules.csv");
+const all_data = new Data("data/Dataset 3/Data.csv", "data/Dataset 3/Rules.csv");
 const drawingTool = new Drawing();
 
 
