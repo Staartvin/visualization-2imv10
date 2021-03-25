@@ -1,5 +1,5 @@
 // Load data files
-const all_data = new Data("data/Dataset 4/Data.csv", "data/Dataset 4/Rules.csv");
+const all_data = new Data("data/Dataset 2/Data.csv", "data/Dataset 2/Rules.csv");
 const drawingTool = new Drawing();
 
 
@@ -21,6 +21,9 @@ all_data.importData()
 
         // Draw the checkboxes of the filters
         FilterView.setupSelector();
+
+        // Filter rules for the first time after rules have been loaded.
+        FilterView.updateFilteredRules();
 
     })
     .catch((e) => {

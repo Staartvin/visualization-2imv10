@@ -316,14 +316,6 @@ class RulesView {
                 for (let [feature, clicked] of RulesView.clickedFeatures.entries()) {
                     if (clicked) {
                         if (!rule.conditions.has(feature)) {
-                            // let x = this.xMargin + columnWidth + number_of_not_shown_rules * 15;
-                            // let color = this.p.color(RulesView.outcomeColors.get(rule.label));
-                            // color.setAlpha(100);
-                            // this.p.fill(color);
-                            //
-                            // this.p.strokeWeight(0);
-                            // number_of_not_shown_rules += 1;
-                            // this.p.circle(x, y, 10); //draw circle for decision node
                             continue loop1; //continue to the next rule
                         }
                     }
@@ -331,21 +323,7 @@ class RulesView {
 
                 // only draw top 30 rules
                 if (ruleIndex > 29) {
-                    let x = this.xMargin + columnWidth + number_of_not_shown_rules * 15;
-                    let color = this.p.color(RulesView.outcomeColors.get(rule.label));
-
-                    color.setAlpha(100);
-                    this.p.fill(color);
-
-                    this.p.strokeWeight(0);
-                    number_of_not_shown_rules += 1;
-                    this.p.circle(x, y, 10); //draw circle for decision node
                     continue; //continue to the next rule
-                }
-
-                if (number_of_not_shown_rules > 0) {
-                    number_of_not_shown_rules = 0;
-                    y += columnHeight;
                 }
 
                 // Calculate the start of the line
@@ -633,6 +611,7 @@ class ControlView {
         secondaryColor = color_map["secondaryColor"];
 
         RulesView.assignColorsToOutcomes();
+        FilterView.mySelectEvent();
     }
 
     get draw() {
@@ -688,7 +667,7 @@ class FilterView {
     static xMargin = 25;
     static yMargin = 75;
     static xSliderMargin = 110;
-    static supportVal = 0;
+    static supportVal = 1;
     static confVal = 0;
     /**
      *
@@ -786,7 +765,6 @@ class FilterView {
 
 
             self.setupSliders();
-
             self.p.pop();
         }
     }
@@ -974,7 +952,7 @@ class FilterView {
      * Create the sliders for confidence and support
      */
     setupSliders() {
-        FilterView.sliderSupport = this.p.createSlider(0, 100, 0);
+        FilterView.sliderSupport = this.p.createSlider(0, 100, 1);
         FilterView.sliderConfidence = this.p.createSlider(0, 100, 0);
         FilterView.sliderSupport.position(FilterView.canvas.x + FilterView.xSliderMargin, FilterView.canvas.y + FilterView.yMargin + 25);
         FilterView.sliderConfidence.position(FilterView.canvas.x + FilterView.xSliderMargin, FilterView.canvas.y + FilterView.yMargin + 50);
@@ -1097,13 +1075,17 @@ class FilterView {
                 if (FilterView.selectedAttributes.get(correct_feature).indexOf(value) === -1) {
                     checked = false;
                 }
+                FilterView.p5.push();
+
                 //Create new checkboxes and position them
                 let checkbox = FilterView.p5.createCheckbox(value, checked);
+                checkbox.style('color', primaryColor);
                 checkbox.position(FilterView.canvas.x + FilterView.xMargin + (index % columns) * X_step, Y);
                 //Add a function to when the checkboxes are clicked
                 checkbox.changed(FilterView.myCheckedEvent);
                 //Add checkbox to list
                 FilterView.checkboxes.push(checkbox);
+                FilterView.p5.pop();
                 index += 1;
             }
         }
@@ -1207,14 +1189,22 @@ class FilterView {
     static filterRulesByVal(rules_to_filter, criteria) {
         return rules_to_filter.filter(function (rule) {
             return Object.keys(criteria).every(function (c) {
-                //If zero, we only want to show rules that have a support or confidence larger than 0
-                if (criteria[c] === 0) {
-                    return rule[c] > criteria[c];
+                if (!rule.meetConditions(FilterView.selectedAttributes)){
+                    return false;
                 }
-                return rule[c] >= criteria[c];
+                // check criteria
+                if (c === "support"){
+                    return rule[c] >= criteria[c]; //include non-supported rules (so also 0)
+                } else { //so confidence
+                    if (rule["support"] === 0){
+                        return true; //confidence is undefined
+                    }
+                    return rule[c] >= criteria[c];
+                }
             });
         });
     }
+
 
     static determineMaxNumberOfValues() {
         for (let feature of RulesView.featureOrder) {

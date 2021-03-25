@@ -48,21 +48,18 @@ class Data {
             return Array.from(criteria.keys()).every(function (feature) {
                 if (feature.isNumeric) {//if numeric, check min and max
                     let inbetween = true;
-                    for (let values of criteria.values()) {
-                        for (let criterium of values) {
-                            criterium = criterium.split(" ");
-                            let equality_sign = criterium[0];
-                            let value = parseFloat(criterium[1]);
-                            if (equality_sign === "\u2265") {
-                                inbetween = row[feature.name] >= value;
-                            } else {
-                                inbetween = row[feature.name] <= value;
-                            }
-                            if (!inbetween) {
-                                return false;
-                            }
+                    for (let criterion of criteria.get(feature)) {
+                        criterion = criterion.split(" ");
+                        let equality_sign = criterion[0];
+                        let value = parseFloat(criterion[1]);
+                        if (equality_sign === "\u2265") {
+                            inbetween = row[feature.name] >= value;
+                        } else {
+                            inbetween = row[feature.name] <= value;
                         }
-
+                        if (!inbetween) {
+                            return false;
+                        }
                     }
                     return inbetween;
                 } else { //if not, check if feature is included in row
@@ -338,7 +335,7 @@ class Feature {
      * @param value
      */
     addValue(value) {
-        if (value !== "" && value !== null){ //only add value if not empty
+        if (value !== "" && value !== null) { //only add value if not empty
             this.values.add(value);
             this.isNumeric = this.isNumerical();
             if (this.isNumeric) {
@@ -495,7 +492,11 @@ class Rule {
      * @param number_of_rows
      */
     setSupportAndConfidence(number_of_rows) {
-        this.support = (this.instancesSatisfiedByRules / number_of_rows) * 100; //in percentage
+        if (number_of_rows === 0){
+            this.support = 0;
+        } else {
+            this.support = (this.instancesSatisfiedByRules / number_of_rows) * 100; //in percentage
+        }
         if (this.instancesSatisfiedByRules === 0) {
             this.confidence = 0;
         } else {
@@ -504,7 +505,57 @@ class Rule {
         this.truePositives = this.perLabelNumberOfInstances.get(this.label);
         this.falsePositives = this.instancesSatisfiedByRules - this.truePositives;
     }
+
+    meetConditions(conditions) {
+        let meetsConditions = true;
+        for (let [feature, criteria] of conditions.entries()) {
+            if (this.conditions.has(feature) && criteria.length > 0){
+                if (feature.isNumeric) {//if numeric, check if rule satisfies both conditions
+                    let inbetween = true;
+                    for (let values of criteria.values()) {
+                        values = values.split(" ");
+                        let equality_sign = values[0];
+                        let value = parseFloat(values[1]);
+                        let condition = this.conditions.get(feature);
+                        let equality_sign_of_rule = condition.equality;
+                        equality_sign = (equality_sign === "\u2265") ? ">=" : "<=";
+                        if (equality_sign_of_rule === "="){
+                            if (equality_sign === ">=") { //>=
+                                inbetween = this.conditions.get(feature.name).value >= value; //value of rule must be smaller than value of condition
+                            } else {  //<=
+                                inbetween = this.conditions.get(feature.name).value <= value;
+                            }
+                        } else {
+                            if (equality_sign.includes(equality_sign_of_rule)) { //larger than or equal
+                                inbetween = true; // if same sign, then rule always satisfies conditions
+                            } else {
+                                if (equality_sign === ">=") { //>=
+                                    inbetween = this.conditions.get(feature).value >= value; //value of rule must be smaller than value of condition
+                                } else {  //<=
+                                    inbetween = this.conditions.get(feature).value <= value;
+                                }
+                                if (!inbetween) {
+                                    return false;
+                                }
+                            }
+                        }
+
+                    }
+                    meetsConditions = inbetween;
+                } else { //if not, check if feature is included in row
+                    meetsConditions = criteria.includes(this.conditions.get(feature).value); //check if condition value is in filter
+                }
+            }
+
+            if (!meetsConditions) { //immediately return false if not met
+                return false;
+            }
+        }
+        return meetsConditions;
+    }
+
 }
+
 
 class Condition {
     /**
