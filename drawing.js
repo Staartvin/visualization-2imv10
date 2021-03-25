@@ -244,10 +244,12 @@ class RulesView {
 
             //show icon to indicate attribute is selected
             if (RulesView.clickedFeatures.get(feature)) {
+                this.p.push();
                 this.p.stroke(0, 92, 71);
                 this.p.strokeWeight(2);
                 this.p.fill(backgroundColor);
                 this.p.triangle(x - 5, y - 5, x + 5, y - 5, x, y + 5);
+                this.p.pop();
             }
             this.p.strokeWeight(primaryColor);
             this.p.fill(primaryColor);
@@ -393,7 +395,7 @@ class RulesView {
                 let remainingWidth = 1; // keep track of percentage of data not satisfied by rules
                 for (const [label, color] of RulesView.outcomeColors.entries()) {
                     let percentageWidth = 0;
-                    percentageWidth = rule.perLabelNumberOfInstances.get(label) / RulesView.determineNumberOfCases(); //Determine percentage TODO for multiple labels
+                    percentageWidth = rule.perLabelNumberOfInstances.get(label) / RulesView.determineNumberOfCases();
                     this.p.fill(color);  //set the fill of the label
                     this.p.rect(tempX + (percentageWidth * totalWidth) / 2, y, percentageWidth * totalWidth, columnHeight * .8); // draw rectangle
                     tempX += percentageWidth * totalWidth; //determine new locations
@@ -1012,6 +1014,7 @@ class FilterView {
      */
     static setupSelector() {
         let sel = FilterView.p5.createSelect();
+        sel.size(200);
         sel.position(FilterView.canvas.x + FilterView.xMargin + FilterView.p5.textWidth("Feature:") + 10, FilterView.yMargin + 120);
         // add all features to the selector
         for (let feature of RulesView.featureOrder) {
