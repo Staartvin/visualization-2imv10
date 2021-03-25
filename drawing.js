@@ -1196,7 +1196,7 @@ class FilterView {
                 if (c === "support"){
                     return rule[c] >= criteria[c]; //include non-supported rules (so also 0)
                 } else { //so confidence
-                    if (rule["support"] === 0){
+                    if (Number.isNaN(rule["confidence"])){
                         return true; //confidence is undefined
                     }
                     return rule[c] >= criteria[c];
