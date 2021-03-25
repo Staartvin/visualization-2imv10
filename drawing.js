@@ -409,7 +409,13 @@ class RulesView {
                 this.p.textAlign(this.p.RIGHT, this.p.CENTER);
                 this.p.fill(primaryColor);
 
-                this.p.text(rule.support.toFixed(0), this.xMargin + totalWidth - 5, y);
+                let support_text = rule.support;
+                if (rule.support > 10){
+                    support_text = support_text.toFixed(0);
+                } else {
+                    support_text = support_text.toFixed(2);
+                }
+                this.p.text(support_text, this.xMargin + totalWidth - 5, y);
                 this.p.pop();
                 // draw small rectangle on the left to indicate start of rule
                 let x = this.xMargin + .95 * columnWidth;
