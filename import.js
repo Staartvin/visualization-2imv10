@@ -338,21 +338,24 @@ class Feature {
      * @param value
      */
     addValue(value) {
-        this.values.add(value);
-        this.isNumeric = this.isNumerical();
-        if (this.isNumeric) {
-            if (value < this.min) {
-                this.min = value;
+        if (value !== "" && value !== null){ //only add value if not empty
+            this.values.add(value);
+            this.isNumeric = this.isNumerical();
+            if (this.isNumeric) {
+                if (value < this.min) {
+                    this.min = value;
+                }
+                if (value > this.max) {
+                    this.max = value;
+                }
+            } else {
+                this.min = NaN;
+                this.max = NaN;
             }
-            if (value > this.max) {
-                this.max = value;
-            }
-        } else {
-            this.min = NaN;
-            this.max = NaN;
+
+            this.numberOfValues = this.values.size;
         }
 
-        this.numberOfValues = this.values.size;
     }
 
     isNumerical() {

@@ -102,6 +102,7 @@ class RulesView {
 
     static attributeColumnHeight = 40;
     static attributeColumnWidth = 40;
+    static last_x;
 
     constructor(p) {
         this._p = null;
@@ -255,23 +256,11 @@ class RulesView {
             this.p.fill(primaryColor);
             x = this.xMargin + ((index + offset) * widthPerLabel) + widthPerLabel / 2; //set off by one for incoming edge
 
-            // Now draw feature name in the attribute box
-
-            // P5 works a bit weird with rotations. Objects rotate with respect to the origin
-            // // This means that I have to place the text on the origin, rotate it and then translate it to where I want it to go.
-            // this.p.push();
-            // this.p.rotate(-this.p.HALF_PI/2);
-            // this.p.textAlign(this.p.CENTER, this.p.CENTER);
-            // this.p.translate(x - widthPerLabel/2, this.yOffset + heightPerLabel*2);
-            // this.p.text(feature.name, 0, 0);
-            // this.p.translate(0, 0);
-            // // this.p.rotate(degreeToRadians(0));
-            // this.p.pop();
-
             this.p.push();
             // Draw the names of the features on top
-            // Make label feature bold
             this.p.textSize(12);
+            this.p.strokeWeight(0);
+            this.p.textStyle(this.p.NORMAL);
             this.p.textAlign(this.p.LEFT, this.p.CENTER);
             // P5 works a bit weird with rotations. Objects rotate with respect to the origin
             // This means that I have to place the text on the origin, rotate it and then translate it to where I want it to go.
@@ -312,9 +301,6 @@ class RulesView {
 
         let ruleIndex = 0;
         let number_of_not_shown_rules = 0;
-
-        let last_x;
-
         // For each rule, draw a row.
         loop1:
             for (let rule of RulesView.filtered_rules.rules) {
@@ -489,36 +475,37 @@ class RulesView {
                 // Increase Y so we go down to the next line
                 y += columnHeight;
                 ruleIndex++;
-                last_x = x;
+                RulesView.last_x = x ;
             }
 
         console.log(`Showing ${RulesView.rules.rules.length} rules!`);
 
-        //Print title for support
+        this.p.push();
         this.p.fill(primaryColor);
         this.p.strokeWeight(0);
-
-        this.p.push();
-
         this.p.textStyle(this.p.BOLD);
+        this.p.textSize(10);
         let x = this.xMargin;
         y = this.yOffset + RulesView.attributeColumnHeight + columnHeight - 15;
         this.p.text(`Support (%)`, x, y);
 
         this.p.textAlign(this.p.CENTER);
-        x = last_x;
+        x = RulesView.last_x;
         y = this.yOffset + RulesView.attributeColumnHeight + columnHeight - 15;
         this.p.text(`Confidence`, x, y);
-
         this.p.pop();
 
-
+        this.p.push();
         //print number of rules shown
+        this.p.textAlign(this.p.LEFT);
+        this.p.textStyle(this.p.NORMAL);
+        this.p.textSize(10);
         this.p.strokeWeight(0);
-        this.p.textSize(Math.min(10, columnHeight * 3 / 5));
+        this.p.fill(primaryColor);
         x = this.xMargin;
         y = 25;
-        this.p.text(`${ruleIndex}/${RulesView.rules.rules.length} rules shown.`, x, y);
+        this.p.text(`${ruleIndex}/${RulesView.rules.rules.length} rules`, x, y);
+        this.p.text(`shown`, x, y + 12);
 
         // Remove the temp style
         this.p.pop();
@@ -903,10 +890,12 @@ class FilterView {
             if (values.length === 0) {
                 continue;
             }
+            this.p.push()
             this.p.textSize(15);
             this.p.textStyle(this.p.BOLD);
             this.p.textAlign(this.p.LEFT);
             this.p.text(feature.name, FilterView.xMargin, Y);
+            this.p.pop();
             Y += Y_step / 2;
             for (let value of values) {
                 let text_in_box = value + '  \u2716'; //unicode for ✖
@@ -914,7 +903,9 @@ class FilterView {
                     X = FilterView.xMargin;
                     Y += Y_step;
                 }
+
                 //set style for rectangle
+                this.p.push();
                 this.p.fill(secondaryBackgroundColor);
                 this.p.stroke(secondaryBackgroundColor);
                 this.p.strokeWeight(1);
@@ -922,13 +913,14 @@ class FilterView {
                 this.p.rect(X, Y, this.p.textWidth(text_in_box) + 5, 20, 3);
                 //create filterbox
                 let filterBox = new FilterBox(feature, value, X, Y, this.p.textWidth(text_in_box) + 5, 20);
+                this.p.pop();
                 //set style for text in rectangle
-                this.p.textStyle(this.p.NORMAL);
+                this.p.push();
                 this.p.fill(primaryColor);
-                this.p.strokeWeight(primaryColor);
                 this.p.textAlign(FilterView.p5.CENTER);
                 this.p.text(text_in_box, X + (this.p.textWidth(text_in_box) + 5) / 2, Y + 11);
                 X += this.p.textWidth(text_in_box) + 5 + 20;
+                this.p.pop();
                 //add filterboxes if needed
                 if (FilterView.newFiltersSelected) {
                     FilterView.filterBoxes.push(filterBox);
