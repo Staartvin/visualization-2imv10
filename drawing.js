@@ -570,8 +570,12 @@ class RulesView {
 
 class ControlView {
 
-    static features = [];
+    static available_dataset_names = [];
+    static dataset_buttons = null;
+    static uploadFileButton = null;
     static darkModeCheckBox = null;
+    static custom_dataset = null;
+    static load_button = null;
 
     constructor(p) {
         this._p = null;
@@ -587,8 +591,13 @@ class ControlView {
             canvas.background(backgroundColor);
             canvas.position(0, 0);
 
+            self.setupDatasetButtons();
             self.setUpCheckBoxDarkMode();
         }
+    }
+
+    static setAvailableDatasets(available_dataset_names) {
+        ControlView.available_dataset_names = available_dataset_names;
     }
 
     setUpCheckBoxDarkMode() {
@@ -597,6 +606,72 @@ class ControlView {
         //Add a function to when the checkboxes are clicked
         checkbox.changed(this.switchDarkMode);
         ControlView.darkModeCheckBox = checkbox;
+    }
+
+    setupDatasetButtons() {
+
+        //Setup upload button for user uploaded datasets
+
+        ControlView.uploadFileButton = this.p.createFileInput(ControlView.handleFile, true);
+        ControlView.uploadFileButton.position(25, 100);
+
+        //Setup Radio Buttons for available datasets
+        ControlView.dataset_buttons = this.p.createRadio();
+
+        for(let i in ControlView.available_dataset_names){
+            ControlView.dataset_buttons.option(ControlView.available_dataset_names[i]);
+            ControlView.dataset_buttons.style('width', '100px');
+        }
+
+        ControlView.dataset_buttons.position(25, 140);
+
+        //Setup load button for any chosen dataset
+        ControlView.load_button = this.p.createButton('Load Dataset');
+        ControlView.load_button.position(160, 140);
+        ControlView.load_button.mousePressed(this.load_visualization);
+
+    }
+
+    static handleFile(file) {
+        //TODO
+        //ControlView.custom_dataset = ControlView.p.save(file.data, 'data/Dataset 5/Data.csv');
+        ControlView.dataset_buttons.option(file.name);
+        ControlView.dataset_buttons.style('width', '100px');
+        console.log('File Handled');
+    }
+
+    load_visualization() {
+        console.log('Load new visualization');
+        let val = ControlView.dataset_buttons.value();
+        if(val){
+            let path_to_data = "data/" + val + "/Data.csv";
+            let path_to_rules = "data/" + val + "/Rules.csv";
+            let all_data = new Data(path_to_data, path_to_rules);
+            all_data.importData()
+                .then(() => all_data.importRules())
+                .then(() => {
+                    //Determine Support and Confidence
+                    all_data.rules.calculateSupportAndConf(all_data.full_data);
+
+                    // Communicate feature ordering to rules view
+                    RulesView.setFeatureOrder(all_data.getOrderingOfFeatures());
+
+                    // Communicate rules to the rules view.
+                    RulesView.setRules(all_data.rules);
+
+                    // Draw the checkboxes of the filters
+                    FilterView.setupSelector();
+
+                    // Filter rules for the first time after rules have been loaded.
+                    FilterView.updateFilteredRules();
+
+                })
+                .catch((e) => {
+                    // console.log(e.toString());
+                    throw(e);
+                });
+        }
+
     }
 
     switchDarkMode() {
@@ -657,9 +732,6 @@ class ControlView {
         this._p.setup = this.setup;
     }
 
-    static setFeatures(features) {
-        ControlView.features = features;
-    }
 }
 
 class FilterView {

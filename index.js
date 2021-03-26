@@ -1,3 +1,10 @@
+//Get paths to all available datasets
+var no_of_available_datasets = 4;
+var all_data_names = new Array("Dataset 1", "Dataset 2", "Dataset 3", "Dataset 4")
+
+// Communicate names of available datasets to Control View
+ControlView.setAvailableDatasets(all_data_names);
+
 // Load data files
 const all_data = new Data("data/Dataset 2/Data.csv", "data/Dataset 2/Rules.csv");
 const drawingTool = new Drawing();
@@ -12,9 +19,6 @@ all_data.importData()
 
         // Communicate feature ordering to rules view
         RulesView.setFeatureOrder(all_data.getOrderingOfFeatures());
-
-        // Communicate features to Control View
-        ControlView.setFeatures(all_data.metadata.features.keys());
 
         // Communicate rules to the rules view.
         RulesView.setRules(all_data.rules);
