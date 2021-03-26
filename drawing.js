@@ -634,9 +634,12 @@ class ControlView {
 
     static handleFile(file) {
         //TODO
-        //ControlView.custom_dataset = ControlView.p.save(file.data, 'data/Dataset 5/Data.csv');
-        ControlView.dataset_buttons.option(file.name);
-        ControlView.dataset_buttons.style('width', '100px');
+
+        if(file.name == 'Data.csv'){
+            ControlView.available_dataset_names.length += 1;
+            ControlView.dataset_buttons.option('Dataset ' + ControlView.available_dataset_names.length);
+            ControlView.dataset_buttons.style('width', '100px');
+        }
         console.log('File Handled');
     }
 
@@ -1350,7 +1353,7 @@ class InfoView {
                 label = value;
                 break;
             }
-            //set stle
+            //set style
             let color = RulesView.outcomeColors.get(label);
             this.p.fill(color); // set fill color true positives // true postives
             this.p.stroke(color); //set stroke color of rectangle
