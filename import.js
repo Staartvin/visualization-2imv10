@@ -255,7 +255,7 @@ class Data {
         // For each rule, determine the strength
         for (let rule of this.rules.rules) {
             for (let feature of rule.conditions.keys()) {
-                let strength = rule.truePositives / (rule.truePositives + rule.falsePositives);
+                let strength = rule.trueInstances / (rule.trueInstances + rule.falseInstances);
 
                 // Store the strength. Strength gets added whenever there is already some value.
                 if (!feature_strength_list.has(feature.name)) {
@@ -449,22 +449,22 @@ class Rule {
      * Stores a rule with the conditions and the outcome (label) of the rule
      * @param {Feature} labelFeature The feature that represents the outcome (so the label feature)
      * @param {string || float || integer} label The value of the outcome
-     * @param {number} truePositives True positives found for this rule
-     * @param {number} falsePositives False positives found for this rule
+     * @param {number} trueInstances True positives found for this rule
+     * @param {number} falseInstances False positives found for this rule
      * @param {number} support Support of a rule, i.e. percentage of instances to which the condition of the rule applies
      * @param {number} confidence Confidence of a rule, i.e. how accurate the rule is in predicting the correct class
      * for the instances to which the condition of the rule applies
      */
-    constructor(labelFeature, label, truePositives = 0, falsePositives = 0, support = 0, confidence = 0) {
-        this.truePositives = truePositives;
-        this.falsePositives = falsePositives;
+    constructor(labelFeature, label, trueInstances = 0, falseInstances = 0, support = 0, confidence = 0) {
+        this.trueInstances = trueInstances;
+        this.falseInstances = falseInstances;
 
         this.perLabelNumberOfInstances = new Map();
         for (let featureName of labelFeature.values) {
             this.perLabelNumberOfInstances.set(featureName, {val: 0});
         }
 
-        this.instancesSatisfiedByRules = truePositives + falsePositives;
+        this.instancesSatisfiedByRules = trueInstances + falseInstances;
 
 
         this.support = support;
@@ -511,8 +511,8 @@ class Rule {
         } else {
             this.confidence = this.perLabelNumberOfInstances.get(this.label) / this.instancesSatisfiedByRules * 100; //in percentage
         }
-        this.truePositives = this.perLabelNumberOfInstances.get(this.label);
-        this.falsePositives = this.instancesSatisfiedByRules - this.truePositives;
+        this.trueInstances = this.perLabelNumberOfInstances.get(this.label);
+        this.falseInstances = this.instancesSatisfiedByRules - this.trueInstances;
     }
 
     meetConditions(conditions) {

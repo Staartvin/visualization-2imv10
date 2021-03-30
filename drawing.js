@@ -335,8 +335,8 @@ class RulesView {
         // For each rule, draw a row.
         loop1:
             for (let rule of RulesView.filtered_rules.rules) {
-                let tp = rule.truePositives;
-                let fp = rule.falsePositives;
+                let tp = rule.trueInstances;
+                let fp = rule.falseInstances;
                 let ratio = 0;
                 if (tp + fp > 0) {
                     ratio = tp / (tp + fp);
@@ -556,8 +556,8 @@ class RulesView {
     static determineNumberOfCases() {
         let sum = 0;
         for (let rule of RulesView.rules.rules) {
-            sum += rule.truePositives;
-            sum += rule.falsePositives;
+            sum += rule.trueInstances;
+            sum += rule.falseInstances;
         }
         return sum;
     }
@@ -675,7 +675,7 @@ class ControlView {
 
     }
 
-    loadRulesFile(file) {
+    loadRulesFile(file, existingFile = true) {
         console.log("Loading rules file...");
 
         // Clear previous error
