@@ -616,7 +616,7 @@ class ControlView {
 
         return function () {
             // We draw an initial canvas.
-            let canvas = self.p.createCanvas(self.p.windowWidth * controlViewWidth, 3 / 5 * self.p.windowHeight);
+            let canvas = self.p.createCanvas(self.p.windowWidth * controlViewWidth, 2 / 5 * self.p.windowHeight);
             canvas.background(backgroundColor);
             canvas.position(0, 0);
 
@@ -1400,9 +1400,9 @@ class InfoView {
 
         return function () {
             // We draw an initial canvas.
-            let canvas = self.p.createCanvas(self.p.windowWidth * filterViewWidth, self.p.windowHeight * 2 / 5);
+            let canvas = self.p.createCanvas(self.p.windowWidth * filterViewWidth, self.p.windowHeight * 3 / 5);
             canvas.background(backgroundColor);
-            canvas.position(0, self.p.windowHeight * 3 / 5);
+            canvas.position(0, self.p.windowHeight * 2 / 5);
 
 
         }
@@ -1498,11 +1498,13 @@ class InfoView {
         this.p.textSize(20);
         let title = "Labels:";
         this.p.text(title, 25, 115);
+
         this.p.pop();
 
         // Find correct outcomeFeature
         let outcomeFeature = RulesView.featureOrder.find(feature => feature.isLabel);
         // Only draw if outcomeFeature is defined
+        let last_y = 135;
         if (typeof outcomeFeature !== 'undefined') {
             for (let value of outcomeFeature.values) {
                 //create temp stule
@@ -1521,7 +1523,20 @@ class InfoView {
                 this.p.pop();
                 y += 20;
             }
+            last_y = y + 40;
         }
+
+        this.p.push();
+        // Draw the text
+        this.p.textAlign(this.p.LEFT);
+        this.p.fill(primaryColor);
+        this.p.strokeWeight(primaryColor);
+        this.p.textSize(20);
+        let stat_title = "Statistics:";
+        this.p.text(stat_title, 25, last_y );
+        this.p.pop();
+
+
     }
 
     get p() {
