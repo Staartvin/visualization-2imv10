@@ -1286,8 +1286,8 @@ class FilterView {
             }
         }
         //Update
-        all_data.filtered_data = all_data.filterData(map);
-        all_data.rules.calculateSupportAndConf(all_data.filtered_data);
+        ControlView.all_data.filtered_data = ControlView.all_data.filterData(map);
+        ControlView.all_data.rules.calculateSupportAndConf(ControlView.all_data.filtered_data);
         FilterView.updateFilteredRules();
     }
 
