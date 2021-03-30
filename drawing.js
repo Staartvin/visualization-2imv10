@@ -1219,8 +1219,8 @@ class FilterView {
 
             FilterView.minInput = minInput;
             FilterView.maxInput = maxInput;
-            minInput.input(FilterView.myInputEvent);
-            maxInput.input(FilterView.myInputEvent);
+            minInput.input(FilterView.adjustIntegerInputBoxes);
+            maxInput.input(FilterView.adjustIntegerInputBoxes);
 
         } else { //draw checkboxes if values are not numerical
             let columns = 2;
@@ -1288,7 +1288,7 @@ class FilterView {
         FilterView.newFiltersSelected = true;
     }
 
-    static myInputEvent() {
+    static adjustIntegerInputBoxes() {
         let feature_name = FilterView.selectBox.value();
         let correct_feature = null;
         for (let feature of RulesView.featureOrder) {
