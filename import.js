@@ -1,7 +1,5 @@
 class Data {
-    constructor(path_to_data, path_to_rules) {
-        this.path_to_data = path_to_data;
-        this.path_to_rules = path_to_rules;
+    constructor() {
         this.rules = new Rules();
         this.metadata = new MetaData();
         this.full_data = [];
@@ -11,12 +9,13 @@ class Data {
     /**
      * Import the data. Returns a promise that will resolve if the data is correctly imported.
      * If an error occured, the promise is rejected.
+     * @param {File} dataFile File that contains data to import
      * @returns {Promise}
      */
-    importData() {
+    importData(dataFile) {
         let that = this;
         return new Promise((resolve, reject) => {
-            Papa.parse(this.path_to_data, {
+            Papa.parse(dataFile, {
                 header: true, //data contains header
                 download: true, //let parser know that file is located at path_to_data
                 dynamicTyping: true, //create ints and such dynamically
@@ -119,12 +118,13 @@ class Data {
     /**
      * Import rules of a csv, rules will be stored as an ordered rule list. This method returns a promise that is rejected
      * if the rules could not be imported successfully. If they were correctly imported, the promise is resolved.
+     * @param {File} dataFile File that contains rules to import
      * @returns {Promise}
      */
-    importRules() {
+    importRules(rulesFile) {
         let that = this;
         return new Promise((resolve, reject) => {
-            Papa.parse(that.path_to_rules, {
+            Papa.parse(rulesFile, {
                 download: true, //let parser know that file is located at path_to_rules
                 dynamicTyping: true, //create ints and such dynamically
                 skipEmptyLines: true, //skip empty lines
