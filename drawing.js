@@ -164,8 +164,6 @@ class RulesView {
         let self = this;
         return function () {
             if (self.p.mouseY < self.yOffset + RulesView.attributeColumnHeight && self.p.mouseY > self.yOffset) {
-                console.log(self.p.mouseY);
-
                 let index_feature = Math.floor((self.p.mouseX - self.xMargin) / RulesView.attributeColumnWidth);
                 if (index_feature > 0 && index_feature < RulesView.featureOrder.length) {
                     let feature = RulesView.featureOrder[index_feature - 1];
@@ -597,11 +595,14 @@ class RulesView {
 class ControlView {
     static loadDataButton = null;
     static loadRulesButton = null;
+    static loadedRulesAndDataPair = false;
+
     static darkModeCheckBox = null;
-    static load_button = null;
+
     static dataFile = null;
     static rulesFile = null;
     static errorText = "";
+
     static all_data = null;
 
     constructor(p) {
@@ -660,6 +661,16 @@ class ControlView {
 
         ControlView.dataFile = file.file;
 
+        // If we had a loaded pair of rules and data, let's make sure to reset the rules file as well.
+        if (ControlView.loadedRulesAndDataPair) {
+            ControlView.errorText = "Cleared the rules file since a new data file was selected";
+            ControlView.rulesFile = null;
+            ControlView.loadedRulesAndDataPair = false;
+            console.log("Resetting rules file");
+            RulesView.rules = null;
+            RulesView.filtered_rules = null;
+        }
+
         ControlView.loadVisualization();
 
     }
@@ -679,6 +690,16 @@ class ControlView {
 
         console.log("Rules file was valid.")
         ControlView.rulesFile = file.file;
+
+        // If we had a loaded pair of rules and data, let's make sure to reset the data file as well.
+        if (ControlView.loadedRulesAndDataPair) {
+            ControlView.errorText = "Cleared the data file since a new rules file was selected";
+            ControlView.dataFile = null;
+            ControlView.loadedRulesAndDataPair = false;
+            console.log("Resetting data file");
+            RulesView.rules = null;
+            RulesView.filtered_rules = null;
+        }
 
         ControlView.loadVisualization();
 
@@ -707,9 +728,13 @@ class ControlView {
                     FilterView.updateFilteredRules();
 
                     ControlView.errorText = "Successfully loaded the files!";
+                    // We found data and rules that worked together, so we have a match!
+                    ControlView.loadedRulesAndDataPair = true;
                 })
                 .catch((e) => {
-                    ControlView.errorText = "Could not load the visualization as either of the files is not valid!";
+                    // Report error to the user
+                    // ControlView.errorText = "Could not load the visualization as either of the files is not valid!";
+                    ControlView.errorText = e.toString();
                     // console.log(e.toString());
                     throw(e);
                 });
@@ -1163,6 +1188,11 @@ class FilterView {
                 correct_feature = feature;
                 break;
             }
+        }
+
+        // Couldn't find the feature we wanted to adjust
+        if (correct_feature === null) {
+            return;
         }
 
         if (correct_feature.isNumeric) {

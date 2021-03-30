@@ -14,6 +14,13 @@ class Data {
      */
     importData(dataFile) {
         let that = this;
+
+        // Reset data
+        this.rules = new Rules();
+        this.metadata = new MetaData();
+        this.full_data = [];
+        this.filtered_data = [];
+
         return new Promise((resolve, reject) => {
             Papa.parse(dataFile, {
                 header: true, //data contains header
@@ -118,11 +125,13 @@ class Data {
     /**
      * Import rules of a csv, rules will be stored as an ordered rule list. This method returns a promise that is rejected
      * if the rules could not be imported successfully. If they were correctly imported, the promise is resolved.
-     * @param {File} dataFile File that contains rules to import
+     * @param {File} rulesFile File that contains rules to import
      * @returns {Promise}
      */
     importRules(rulesFile) {
         let that = this;
+        // Reset rules.
+        this.rules =  new Rules();
         return new Promise((resolve, reject) => {
             Papa.parse(rulesFile, {
                 download: true, //let parser know that file is located at path_to_rules
