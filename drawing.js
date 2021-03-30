@@ -320,6 +320,18 @@ class RulesView {
         this.p.textAlign(this.p.LEFT, this.p.BOTTOM);
         this.p.textSize(Math.min(15, columnHeight * 3 / 5));
 
+        // Size of text shown in each cell
+        let textSizeOfConditionValues = 99;
+
+        // Loop over all values that are present in the condition and try to find the smallest required font.
+        // We use that font for every text in a cell.
+        for (let rule of RulesView.filtered_rules.rules) {
+            for (let [feature, condition] of rule.conditions.entries()) {
+                let value = condition.unicode_equality + " " + condition.value;
+                textSizeOfConditionValues = Math.min(RulesView.computeFittingFontSize(value, columnHeight, columnWidth), textSizeOfConditionValues);
+            }
+        }
+
         let ruleIndex = 0;
         let number_of_not_shown_rules = 0;
         // For each rule, draw a row.
@@ -369,7 +381,7 @@ class RulesView {
                     this.p.fill(RulesView.outcomeColors.get(rule.label)); //set fill color of circle
                     this.p.circle(x, y, 10); //draw circle for decision node
                     this.p.fill(secondaryColor); // set text color
-                    this.p.textSize(10);
+                    this.p.textSize(textSizeOfConditionValues);
                     this.p.text(value, x + 5, y - 2); //draw the text
                 }
                 this.p.strokeWeight(0);
@@ -757,7 +769,7 @@ class ControlView {
         this.p.text("Select a data file:", 25, 110);
         this.p.text("Select a rules file:", 25, 180);
 
-        this.p.textSize(RulesView.computeFittingFontSize(ControlView.errorText, 50, this.p.width * 2/3));
+        this.p.textSize(RulesView.computeFittingFontSize(ControlView.errorText, 50, this.p.width * 2 / 3));
         this.p.fill("#ef9a9a");
         this.p.text(ControlView.errorText, 25, 240);
         this.p.pop();
