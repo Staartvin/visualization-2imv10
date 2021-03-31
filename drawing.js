@@ -713,7 +713,7 @@ class ControlView {
                 .then(() => ControlView.all_data.importRules(ControlView.rulesFile))
                 .then(() => {
                     //Determine Support and Confidence
-                    ControlView.all_data.rules.calculateSupportAndConf(ControlView.all_data.full_data);
+                    ControlView.all_data.rules.calculateSupportAndConf(ControlView.all_data.full_data, ControlView.all_data.metadata.labels);
 
                     // Communicate feature ordering to rules view
                     RulesView.setFeatureOrder(ControlView.all_data.getOrderingOfFeatures());
@@ -1329,7 +1329,7 @@ class FilterView {
         }
         //Update
         ControlView.all_data.filtered_data = ControlView.all_data.filterData(map);
-        ControlView.all_data.rules.calculateSupportAndConf(ControlView.all_data.filtered_data);
+        ControlView.all_data.rules.calculateSupportAndConf(ControlView.all_data.filtered_data, ControlView.all_data.metadata.labels);
         FilterView.updateFilteredRules();
     }
 

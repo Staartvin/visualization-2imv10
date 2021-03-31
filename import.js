@@ -161,6 +161,7 @@ class Data {
                             if (isNumeric(label)) {
                                 label = parseInt(label);
                             }
+                            that.metadata.labels.add(label);
                             let rule;
                             try { //try to create rule
                                 rule = new Rule(that.metadata.getFeature("label"), label, true_positives, false_positives); // create rule
@@ -225,6 +226,7 @@ class Data {
                             if (isNumeric(label)) {
                                 label = parseInt(label);
                             }
+                            that.metadata.labels.add(label);
                             let rule;
                             try { //try to create default rule
                                 rule = new Rule(that.metadata.getFeature("label"), label);
@@ -294,6 +296,7 @@ class MetaData {
     constructor() {
         // Set contains items of the class Feature
         this.features = new Map();
+        this.labels = new Set();
         this.containsAnd = false;
     }
 
@@ -409,13 +412,18 @@ class Rules {
      * Returns the support value of a rule.
      * @param {Data} all_data all data in the dataset
      */
-    calculateSupportAndConf(all_data) {
+    calculateSupportAndConf(all_data, metadata) {
         //reset everything to 0
         for (let rule of this.rules) {
             rule.instancesSatisfiedByRules = 0;
             for (let key of rule.perLabelNumberOfInstances.keys()) {
                 rule.perLabelNumberOfInstances.set(key, 0);
             }
+        }
+
+        let predicted;
+        if(all_data){
+            predicted = new Array(all_data.length).fill('NaN');
         }
 
         //loop over all data and check by while rule the data is satisfied
@@ -432,6 +440,7 @@ class Rules {
                         // all values are equal to the rule
                         rule.instancesSatisfiedByRules += 1;
                         rule.perLabelNumberOfInstances.set(row['label'], rule.perLabelNumberOfInstances.get(row['label']) + 1); // increase specific label value
+                        predicted[numberOfRows] = rule.label;
                         numberOfRows++;
                         continue outerloop
                     }
@@ -441,6 +450,37 @@ class Rules {
         for (let rule of this.rules) {
             rule.setSupportAndConfidence(numberOfRows);
         }
+
+        if(metadata){
+            var perLabelTP = new Map();
+            for (let label of metadata) {
+                perLabelTP.set(label,  0);
+            }
+
+
+            var perLabelFN = new Map();
+            for (let label of metadata) {
+                perLabelFN.set(label, 0);
+            }
+
+            let true_val;
+            let predicted_val;
+            for (let i = 0; i < all_data.length; i++) {
+                true_val = all_data[i]['label'];
+                predicted_val = predicted[i];
+
+                if (true_val == predicted_val) {
+                    perLabelTP.set(true_val, perLabelTP.get(true_val) + 1); // increase specific label value
+                } else {
+                    perLabelFN.set(true_val, perLabelFN.get(true_val) + 1); // increase specific label value
+                }
+            }
+        }
+
+
+        //Set FP and TN
+
+
     }
 }
 
