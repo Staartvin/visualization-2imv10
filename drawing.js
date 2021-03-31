@@ -1414,7 +1414,8 @@ class InfoView {
             self.p.background(backgroundColor);
             self.drawBorder();
             self.drawPill();
-            self.drawLegend();
+            let last_y = self.drawLegend();
+            self.drawStatistics(last_y);
         }
     }
 
@@ -1525,7 +1526,10 @@ class InfoView {
             }
             last_y = y + 40;
         }
+        return last_y
+    }
 
+    drawStatistics(last_y){
         this.p.push();
         // Draw the text
         this.p.textAlign(this.p.LEFT);
@@ -1534,8 +1538,15 @@ class InfoView {
         this.p.textSize(20);
         let stat_title = "Statistics:";
         this.p.text(stat_title, 25, last_y );
-        this.p.pop();
 
+        if(RulesView.rules){
+            this.p.text('Accuracy: ' + RulesView.rules.accuracy, 25, last_y + 20 )
+            this.p.text('Precision: ' + RulesView.rules.precision, 25, last_y + 40 );
+            this.p.text('Recall: ' + RulesView.rules.recall, 25, last_y + 60 );
+            this.p.text('F1 Score: ' + RulesView.rules.f1_score, 25, last_y + 80 );
+        }
+
+        this.p.pop();
 
     }
 

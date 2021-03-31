@@ -388,6 +388,10 @@ class Rules {
          * @type {[Rule]}
          */
         this.rules = [];
+        this.accuracy = 0;
+        this.precision = 0;
+        this.recall = 0;
+        this.f1_score = 0;
     }
 
     /**
@@ -422,8 +426,14 @@ class Rules {
         }
 
         let predicted;
-        if(all_data){
+        if (all_data) {
             predicted = new Array(all_data.length).fill('NaN');
+        }
+        if(metadata) {
+            var perLabelGroundTruth = new Map();
+            for (let label of metadata) {
+                perLabelGroundTruth.set(label, 0);
+            }
         }
 
         //loop over all data and check by while rule the data is satisfied
@@ -451,16 +461,16 @@ class Rules {
             rule.setSupportAndConfidence(numberOfRows);
         }
 
-        if(metadata){
+        if (metadata) {
             var perLabelTP = new Map();
             for (let label of metadata) {
-                perLabelTP.set(label,  0);
+                perLabelTP.set(label, 0);
             }
 
 
-            var perLabelFN = new Map();
+            var perLabelFP = new Map();
             for (let label of metadata) {
-                perLabelFN.set(label, 0);
+                perLabelFP.set(label, 0);
             }
 
             let true_val;
@@ -469,18 +479,59 @@ class Rules {
                 true_val = all_data[i]['label'];
                 predicted_val = predicted[i];
 
+                perLabelGroundTruth.set(true_val, perLabelGroundTruth.get(true_val) + 1)
+
                 if (true_val == predicted_val) {
                     perLabelTP.set(true_val, perLabelTP.get(true_val) + 1); // increase specific label value
                 } else {
-                    perLabelFN.set(true_val, perLabelFN.get(true_val) + 1); // increase specific label value
+                    perLabelFP.set(predicted_val, perLabelFP.get(predicted_val) + 1); // increase specific label value
                 }
             }
         }
 
 
-        //Set FP and TN
+        //Calculate statistics
+        this.calculateStats(perLabelTP, perLabelFP, perLabelGroundTruth, numberOfRows);
 
+    }
 
+    calculateStats(perLabelTP, perLabelFP, perLabelGroundTruth, noOfPreds) {
+        let accuracy = 0;
+        let precision = 0;
+        let recall = 0;
+        let f1_score = 0;
+
+        let truePos = 0;
+        let falsePos = 0;
+
+        let labelTP;
+        let labelFP;
+        let labelGroundTruth;
+
+        for (let label of perLabelTP) {
+            truePos += label[1];
+        }
+
+        this.accuracy = truePos/noOfPreds;
+
+        precision = 0;
+
+        let perLabelTPArr = Array.from( perLabelTP.values() );
+        let perLabelFPArr = Array.from( perLabelFP.values() );
+        let perLabelGroundTruthArr = Array.from( perLabelGroundTruth.values() );
+
+        for (let i = 0; i < perLabelTP.size; i++) {
+            precision += perLabelTPArr[i]/(perLabelFPArr[i]+perLabelTPArr[i]);
+            recall += perLabelTPArr[i]/(perLabelGroundTruthArr[i]);
+        }
+
+        precision = precision/perLabelTP.size;
+        recall = recall/perLabelTP.size;
+        f1_score = 2 * ((precision*recall)/(precision+recall));
+
+        this.precision = precision;
+        this.recall = recall;
+        this.f1_score = f1_score;
     }
 }
 
