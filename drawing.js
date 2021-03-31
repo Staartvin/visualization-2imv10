@@ -1539,11 +1539,14 @@ class InfoView {
         let stat_title = "Statistics:";
         this.p.text(stat_title, 25, last_y );
 
+        last_y += 20;
+
+        this.p.textSize(15);
         if(RulesView.rules){
-            this.p.text('Accuracy: ' + RulesView.rules.accuracy, 25, last_y + 20 )
-            this.p.text('Precision: ' + RulesView.rules.precision, 25, last_y + 40 );
-            this.p.text('Recall: ' + RulesView.rules.recall, 25, last_y + 60 );
-            this.p.text('F1 Score: ' + RulesView.rules.f1_score, 25, last_y + 80 );
+            this.p.text('Accuracy: ' + ControlView.all_data.rules.accuracy, 25, last_y + 20 )
+            this.p.text('Precision: ' + ControlView.all_data.rules.precision, 25, last_y + 40 );
+            this.p.text('Recall: ' + ControlView.all_data.rules.recall, 25, last_y + 60 );
+            this.p.text('F1 Score: ' + ControlView.all_data.rules.f1_score, 25, last_y + 80 );
         }
 
         this.p.pop();

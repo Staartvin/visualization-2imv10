@@ -429,12 +429,7 @@ class Rules {
         if (all_data) {
             predicted = new Array(all_data.length).fill('NaN');
         }
-        if(metadata) {
-            var perLabelGroundTruth = new Map();
-            for (let label of metadata) {
-                perLabelGroundTruth.set(label, 0);
-            }
-        }
+
 
         //loop over all data and check by while rule the data is satisfied
         let numberOfRows = 0;
@@ -461,6 +456,12 @@ class Rules {
             rule.setSupportAndConfidence(numberOfRows);
         }
 
+        this.calculateConfusionMatrix(metadata, predicted, all_data, numberOfRows);
+
+
+    }
+
+    calculateConfusionMatrix(metadata, predicted, all_data, numberOfRows){
         if (metadata) {
             var perLabelTP = new Map();
             for (let label of metadata) {
@@ -472,6 +473,13 @@ class Rules {
             for (let label of metadata) {
                 perLabelFP.set(label, 0);
             }
+
+
+            var perLabelGroundTruth = new Map();
+            for (let label of metadata) {
+                perLabelGroundTruth.set(label, 0);
+            }
+
 
             let true_val;
             let predicted_val;
@@ -489,10 +497,8 @@ class Rules {
             }
         }
 
-
         //Calculate statistics
         this.calculateStats(perLabelTP, perLabelFP, perLabelGroundTruth, numberOfRows);
-
     }
 
     calculateStats(perLabelTP, perLabelFP, perLabelGroundTruth, noOfPreds) {
