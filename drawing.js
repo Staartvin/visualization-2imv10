@@ -100,9 +100,12 @@ class RulesView {
     };
 
 
-    static attributeColumnHeight = 40;
+    static attributeColumnHeight = 50;
     static attributeColumnWidth = 40;
     static last_x;
+    static loadCounter = 0;
+
+    static ruleMinFontSize = 99;
 
     constructor(p) {
         this._p = null;
@@ -141,21 +144,26 @@ class RulesView {
 
             self.p.background(backgroundColor);
 
-            // Don't draw anything if we have no features.
-            if (RulesView.featureOrder.length === 0) {
-                return;
+            // We check if we can draw the rules, and otherwise, we tell the user what to do.
+            if (ControlView.error){
+                if (ControlView.errorText.includes("csv")){
+                    self.drawInformation("There seems to be an error\n" + ControlView.errorText);
+                } else {
+                    self.drawInformation("There seems to be an error\n Please check if your data set belongs to the rule decision list. \n(" + ControlView.errorText + ")");
+                }
             }
-
-            // Draw attribute labels.
-            self.drawFeatureLabels();
-
-            // Stop drawing if there are no rules.
-            if (RulesView.rules == null || RulesView.rules.rules.length < 1) {
-                return;
+            else if (ControlView.loading) {
+                self.drawInformation("Loading... (Sit back and relax, this may take a while)");
+            } else if (ControlView.loadedRulesAndDataPair) {
+                self.drawRules();
+                self.drawFeatureLabels();
+            } else if (ControlView.dataFile !== null) { //then ruleFile must be null
+                self.drawInformation("Please, select a rule decision list");
+            } else if (ControlView.rulesFile !== null) {
+                self.drawInformation("Please, select a datafile");
+            } else { //both are null
+                self.drawInformation("Please, select a data file and rule decision list");
             }
-
-            // We can draw the rules now.
-            self.drawRules();
 
         }
     }
@@ -178,8 +186,8 @@ class RulesView {
     drawBorder() {
         this.p.push();
         this.p.fill(backgroundColor);
-        this.p.stroke("#FFC114");
-        this.p.strokeWeight(4);
+        // this.p.stroke("#FFC114");
+        this.p.strokeWeight(0);
         this.p.rect(0, 0, this.p.width, this.p.height);
         this.p.pop();
 
@@ -219,13 +227,6 @@ class RulesView {
         this.p.textAlign(this.p.CENTER, this.p.CENTER);
         this.p.textSize(Math.min(25, heightPerLabel / 1.5));
 
-        // Determine font size (based on the longest text)
-        let fontSizeForFeatureLabel = 99;
-
-        for (let feature of RulesView.featureOrder) {
-            let fittingFont = RulesView.computeFittingFontSize(feature.name, heightPerLabel, widthPerLabel);
-            fontSizeForFeatureLabel = Math.min(fontSizeForFeatureLabel, fittingFont);
-        }
 
         // For all features, draw a box
         for (let feature of RulesView.featureOrder) {
@@ -246,7 +247,7 @@ class RulesView {
             this.p.push();
 
             let x = this.xMargin + ((index + offset) * widthPerLabel) + 10; //set off by one for incoming edge
-            let y = this.yOffset + heightPerLabel;
+            let y = this.yOffset + heightPerLabel + 10;
 
 
             //show icon to indicate attribute is selected
@@ -261,18 +262,67 @@ class RulesView {
             this.p.strokeWeight(primaryColor);
             this.p.fill(primaryColor);
             x = this.xMargin + ((index + offset) * widthPerLabel) + widthPerLabel / 2; //set off by one for incoming edge
-
+            y = this.yOffset + heightPerLabel;
             this.p.push();
             // Draw the names of the features on top
-            this.p.textSize(fontSizeForFeatureLabel);
+            this.p.textSize(12);
             this.p.strokeWeight(0);
             this.p.textStyle(this.p.NORMAL);
-            this.p.textAlign(this.p.LEFT, this.p.CENTER);
+            let featureNames = null;
+            if (feature.name.includes(" ")){
+                featureNames = feature.name.split(" ");
+            } else if (/[A-Z]/.test(feature.name)){
+                featureNames = feature.name.match(/[A-Z][a-z]+/g);
+            } else {
+                featureNames = [feature.name];
+            }
+            let maxLength = 13;
+            for (let i = 0; i<featureNames.length;  i++){
+                let name = featureNames[i];
+                if (name.length > maxLength){
+                    let names = null;
+                    let splitbyslash = false;
+                    if (name.includes("/")){
+                        names = name.split("/");
+                        splitbyslash = true;
+                    } else {
+                        names = name.match(/.{1,13}/g);
+                    }
+                    featureNames.splice(i, 1);
+                    for (let j = 0; j<names.length; j++){
+                        let text = names[j];
+                        if (j !== names.length - 1){
+                            text += splitbyslash ? "/" : "-";
+                        }
+                        featureNames.splice(i+j, 0, text);
+                    }
+                } else { //smaller than maxLength, see if next word would fit
+                    while (i !== featureNames.length - 1 && featureNames[i].length + featureNames[i+1].length + 1 < maxLength){
+                        featureNames[i] = featureNames[i] + " " + featureNames[i+1];
+                        featureNames.splice(i+1, 1);
+                    }
+                }
+            }
+
+            x -= (featureNames.length - 1)  * 7.5 + 15;
+
             // P5 works a bit weird with rotations. Objects rotate with respect to the origin
             // This means that I have to place the text on the origin, rotate it and then translate it to where I want it to go.
-            this.p.translate(x, 1.25 * this.yOffset + heightPerLabel);
+
+            this.p.textAlign(this.p.LEFT, this.p.CENTER);
+            this.p.translate(x, y);
             this.p.rotate(degreeToRadians(-90));
-            this.p.text(feature.name, 0, 0);
+            for (name of featureNames){
+                //rotate back
+                this.p.rotate(degreeToRadians(90));
+                // move
+                this.p.translate(15, 0);
+                //rotate again
+                this.p.rotate(degreeToRadians(-90));
+                this.p.text(name, 0, 0);
+            }
+
+
             this.p.pop();
 
 
@@ -292,10 +342,47 @@ class RulesView {
      * @param maxWidth Width of the box
      * @return {number} the largest font size (in pt) that should be used to let the text fit.
      */
-    static computeFittingFontSize(text, maxHeight, maxWidth) {
-        let constant = 0.9;
-
+    static computeFittingFontSize(text, maxHeight, maxWidth, constant=1) {
         return constant * Math.sqrt((maxHeight * maxWidth) / text.length)
+    }
+
+    drawInformation(text) {
+        this.p.push();
+        text = text.split("\n");
+        this.p.textAlign(this.p.CENTER, this.p.CENTER);
+        this.p.textSize(37);
+        this.p.fill(primaryColor);
+        this.p.strokeWeight(0);
+        this.p.text(text[0], this.p.width / 2, this.p.height / 2);
+
+        text = text.slice(1);
+        this.p.textSize(25);
+        this.p.textAlign(this.p.CENTER, this.p.TOP);
+        this.p.text(text.join("\n"), this.p.width / 2, this.p.height / 2 + 40);
+
+        this.p.pop();
+    }
+
+    drawLoadIcon(){
+        this.p.push();
+        this.p.ellipseMode(this.p.CENTER);
+
+        let color = this.p.color(primaryColor);
+        let alphaIncrement = 255/8;
+        let x = this.p.width/2 + this.p.textWidth('Loading') + 10;
+        let y = this.p.height/2;
+
+        let xCoordinates = [x-20, x-13.75, x, x+13.75, x+20, x+13.75, x, x-13.75];
+        let yCoordinates = [y, y-13.75, y-20, y-13.75, y, y+13.75, y+20, y+13.75];
+
+        for (let i=0; i<8; i++){
+            let alpha = ((Math.floor(RulesView.loadCounter) - i)%8)*alphaIncrement;
+            color.setAlpha(alpha);
+            this.p.fill(color);
+            this.p.ellipse(xCoordinates[i], yCoordinates[i], 10, 10);
+        }
+        RulesView.loadCounter += 0.15;
+        this.p.pop();
     }
 
     /**
@@ -331,7 +418,7 @@ class RulesView {
         }
 
         let ruleIndex = 0;
-        let number_of_not_shown_rules = 0;
+
         // For each rule, draw a row.
         loop1:
             for (let rule of RulesView.filtered_rules.rules) {
@@ -412,7 +499,8 @@ class RulesView {
                 } else {
                     support_text = support_text.toFixed(1);
                 }
-                this.p.textSize(RulesView.computeFittingFontSize(support_text, columnHeight * 0.4, remainingWidth * totalWidth));
+                RulesView.ruleMinFontSize = Math.min(RulesView.computeFittingFontSize(support_text, columnHeight * 0.4, remainingWidth * totalWidth, .8), RulesView.ruleMinFontSize);
+                this.p.textSize(RulesView.ruleMinFontSize);
                 this.p.text(support_text, this.xMargin + totalWidth - 5, y);
                 this.p.pop();
                 // draw small rectangle on the left to indicate start of rule
@@ -486,8 +574,8 @@ class RulesView {
         this.p.fill(primaryColor);
         this.p.strokeWeight(0);
         this.p.textStyle(this.p.BOLD);
-        this.p.textSize(RulesView.computeFittingFontSize("Support (40%)", 50, 0.95 * columnWidth));
-        let x = this.xMargin;
+        this.p.textSize(RulesView.computeFittingFontSize("Support (40%)", 50, 0.95 * columnWidth, .8));
+        let x = 0;
         y = this.yOffset + RulesView.attributeColumnHeight + columnHeight - 25;
         this.p.text(`Support (%)`, x, y);
 
@@ -501,7 +589,7 @@ class RulesView {
         //print number of rules shown
         this.p.textAlign(this.p.LEFT);
         this.p.textStyle(this.p.NORMAL);
-        this.p.textSize(RulesView.computeFittingFontSize("**/** rules", 50, 0.95 * columnWidth));
+        this.p.textSize(RulesView.computeFittingFontSize("**/** rules", 50, 0.95 * columnWidth, .8));
         this.p.strokeWeight(0);
         this.p.fill(primaryColor);
         x = this.xMargin;
@@ -589,6 +677,10 @@ class RulesView {
         }
     }
 
+    static updateDarkModeColors() {
+        RulesView.assignColorsToOutcomes();
+    }
+
 }
 
 
@@ -596,6 +688,8 @@ class ControlView {
     static loadDataButton = null;
     static loadRulesButton = null;
     static loadedRulesAndDataPair = false;
+    static loading = false;
+    static error = false;
 
     static darkModeCheckBox = null;
 
@@ -634,13 +728,12 @@ class ControlView {
     }
 
     setupDatasetButtons() {
-
         //Setup upload button for user uploaded datasets
         ControlView.loadDataButton = this.p.createFileInput(this.loadDataFile);
-        ControlView.loadDataButton.position(25, 130);
+        ControlView.loadDataButton.position(25, 180);
 
         ControlView.loadRulesButton = this.p.createFileInput(this.loadRulesFile);
-        ControlView.loadRulesButton.position(25, 200);
+        ControlView.loadRulesButton.position(25, 250);
 
     }
 
@@ -648,43 +741,64 @@ class ControlView {
         console.log("Loading data file...");
 
         // Clear previous error
-        ControlView.errorText = "";
         ControlView.dataFile = null;
 
         if (file.name !== 'Data.csv') {
-            ControlView.errorText = "The data file is not called 'Data.csv'!";
-            console.log("Data file was invalid.")
+            ControlView.error = true;
+            if (ControlView.errorText.includes('Rules.csv')){
+                ControlView.errorText = "The data file is not called 'Data.csv'!\nThe rules file is not called 'Rules.csv'!";
+            } else {
+                ControlView.errorText = "The data file is not called 'Data.csv'!";
+            }
+            console.log("Data file was invalid.");
+            if (ControlView.loadedRulesAndDataPair) {
+                ControlView.resetRulesFile();
+            }
+            ControlView.reset();
             return;
         }
 
-        console.log("Data file was valid.")
+        console.log("Data file was valid.");
 
         ControlView.dataFile = file.file;
 
         // If we had a loaded pair of rules and data, let's make sure to reset the rules file as well.
         if (ControlView.loadedRulesAndDataPair) {
-            ControlView.errorText = "Cleared the rules file since a new data file was selected";
-            ControlView.rulesFile = null;
-            ControlView.loadedRulesAndDataPair = false;
-            console.log("Resetting rules file");
-            RulesView.rules = null;
-            RulesView.filtered_rules = null;
+            ControlView.errorText = "Cleared the rules file \nsince a new data file was selected";
+            ControlView.resetRulesFile();
         }
 
         ControlView.loadVisualization();
 
     }
 
+    static resetRulesFile(){
+        ControlView.loadRulesButton.value('');
+        ControlView.rulesFile = null;
+        ControlView.loadedRulesAndDataPair = false;
+        console.log("Resetting rules file");
+        RulesView.rules = null;
+        RulesView.filtered_rules = null;
+    }
+
     loadRulesFile(file, existingFile = true) {
         console.log("Loading rules file...");
 
         // Clear previous error
-        ControlView.errorText = "";
         ControlView.rulesFile = null;
 
         if (file.name !== 'Rules.csv') {
-            ControlView.errorText = "The rules file is not called 'Rules.csv'!";
-            console.log("Rules file was invalid.")
+            ControlView.error = true;
+            if (ControlView.errorText.includes('Data.csv')){
+                ControlView.errorText += "\nThe rules file is not called 'Rules.csv'!";
+            } else {
+                ControlView.errorText = "The rules file is not called 'Rules.csv'!";
+            }
+            console.log("Rules file was invalid.");
+            if (ControlView.loadedRulesAndDataPair) {
+                ControlView.resetDataFile();
+            }
+            ControlView.reset();
             return;
         }
 
@@ -693,22 +807,32 @@ class ControlView {
 
         // If we had a loaded pair of rules and data, let's make sure to reset the data file as well.
         if (ControlView.loadedRulesAndDataPair) {
-            ControlView.errorText = "Cleared the data file since a new rules file was selected";
-            ControlView.dataFile = null;
-            ControlView.loadedRulesAndDataPair = false;
-            console.log("Resetting data file");
-            RulesView.rules = null;
-            RulesView.filtered_rules = null;
+            ControlView.errorText = "Cleared the data file \nsince a new rules file was selected";
+            ControlView.resetDataFile();
         }
 
         ControlView.loadVisualization();
 
     }
 
+    static resetDataFile(){
+        ControlView.dataFile = null;
+        ControlView.loadDataButton.value('');
+        ControlView.loadedRulesAndDataPair = false;
+        console.log("Resetting data file");
+        RulesView.rules = null;
+        RulesView.filtered_rules = null;
+    }
+
     static loadVisualization() {
         console.log('Trying to load visualization');
+
+        ControlView.reset();
+
         if (ControlView.dataFile != null && ControlView.rulesFile != null) {
             console.log('Load visualization...');
+            ControlView.loading = true;
+            ControlView.error = false;
             ControlView.all_data.importData(ControlView.dataFile)
                 .then(() => ControlView.all_data.importRules(ControlView.rulesFile))
                 .then(() => {
@@ -721,27 +845,51 @@ class ControlView {
                     // Communicate rules to the rules view.
                     RulesView.setRules(ControlView.all_data.rules);
 
-                    // Draw the checkboxes of the filters
-                    FilterView.setupSelector();
-
                     // Filter rules for the first time after rules have been loaded.
                     FilterView.updateFilteredRules();
 
                     ControlView.errorText = "Successfully loaded the files!";
                     // We found data and rules that worked together, so we have a match!
                     ControlView.loadedRulesAndDataPair = true;
+                    ControlView.loading = false;
+
+                    // Draw the checkboxes of the filters
+                    FilterView.setupSelector();
                 })
                 .catch((e) => {
                     // Report error to the user
                     // ControlView.errorText = "Could not load the visualization as either of the files is not valid!";
                     ControlView.errorText = e.toString();
+                    ControlView.loading = false;
+                    ControlView.error = true;
                     // console.log(e.toString());
                     throw(e);
                 });
         } else {
-            ControlView.errorText = "Could not load the visualization as either of the files is not valid!";
+            if (ControlView.dataFile === null){
+                ControlView.errorText = "The data file is not called 'Data.csv'!";
+            } else if (ControlView.rulesFile === null){
+                ControlView.errorText = "The rules file is not called 'Rules.csv'!";
+            }
+            // ControlView.errorText = "Could not load the visualization \nas either of the files is not valid!";
             console.log('We are missing either a rules or a data file.');
         }
+
+    }
+
+    static reset(){
+
+        RulesView.ruleMinFontSize = 99;
+
+        // Clear the selector
+        FilterView.setupSelector();
+
+        // Clear the input for filters
+        FilterView.clearInputForFilters();
+
+        //Reset the sliders
+        FilterView.setupSliders();
+
 
     }
 
@@ -749,15 +897,17 @@ class ControlView {
         darkmode = ControlView.darkModeCheckBox.checked();
         let color_map = lightModeColors;
         if (darkmode) {
-            color_map = darkModeColors
+            color_map = darkModeColors;
         }
         backgroundColor = color_map["backgroundColor"];
         secondaryBackgroundColor = color_map["secondaryBackgroundColor"];
         primaryColor = color_map["primaryColor"];
         secondaryColor = color_map["secondaryColor"];
 
-        RulesView.assignColorsToOutcomes();
-        FilterView.selectorChangedEvent();
+
+        ControlView.updateDarkModeColors();
+        RulesView.updateDarkModeColors();
+        FilterView.updateDarkModeColors();
     }
 
     get draw() {
@@ -771,17 +921,22 @@ class ControlView {
     drawBorder() {
         this.p.push();
         this.p.fill(backgroundColor);
-        this.p.stroke("#9AA6AB");
-        this.p.strokeWeight(4);
+        this.p.background(backgroundColor);
+        // this.p.stroke("#9AA6AB");
+        this.p.strokeWeight(0);
         this.p.rect(0, 0, this.p.width, this.p.height);
-        this.p.pop();
+
 
         // Draw title of structural view
         this.p.noStroke();
         this.p.textSize(32);
-        this.p.textAlign(this.p.CENTER);
+        this.p.textAlign(this.p.LEFT, this.p.CENTER);
         this.p.fill(primaryColor);
-        this.p.text("Import & Control", this.p.width / 2, 30);
+        this.p.text("Preferences", 25, 30);
+
+        this.p.text("Upload Your Files", 25, 120);
+
+        this.p.pop();
     }
 
     drawText() {
@@ -791,15 +946,18 @@ class ControlView {
         this.p.textAlign(this.p.LEFT, this.p.CENTER);
         this.p.text("Dark mode", 50, 70);
         this.p.textSize(22);
-        this.p.text("Select a data file:", 25, 110);
-        this.p.text("Select a rules file:", 25, 180);
+        this.p.text("Select a data file:", 25, 160);
+        this.p.text("Select a rules file:", 25, 230);
 
-        this.p.textSize(RulesView.computeFittingFontSize(ControlView.errorText, 50, this.p.width * 2 / 3));
+        this.p.textSize(15);
         this.p.fill("#ef9a9a");
-        this.p.text(ControlView.errorText, 25, 240);
+        // this.p.text(ControlView.errorText, 25, 300);
         this.p.pop();
+    }
 
-
+    static updateDarkModeColors() {
+        ControlView.loadDataButton.style('color', primaryColor);
+        ControlView.loadRulesButton.style('color', primaryColor);
     }
 
     get p() {
@@ -811,6 +969,7 @@ class ControlView {
         this._p.draw = this.draw;
         this._p.setup = this.setup;
     }
+
 
 }
 
@@ -916,7 +1075,7 @@ class FilterView {
             self.p.textSize(15);
 
 
-            self.setupSliders();
+            FilterView.setupSliders();
             self.p.pop();
         }
     }
@@ -937,8 +1096,8 @@ class FilterView {
     drawBorder() {
         this.p.push();
         this.p.fill(backgroundColor);
-        this.p.stroke("#181818");
-        this.p.strokeWeight(4);
+        // this.p.stroke("#181818");
+        this.p.strokeWeight(0);
         this.p.rect(0, 0, this.p.width, this.p.height);
         this.p.pop();
     }
@@ -1103,21 +1262,33 @@ class FilterView {
     /**
      * Create the sliders for confidence and support
      */
-    setupSliders() {
-        FilterView.sliderSupport = this.p.createSlider(0, 100, 1);
-        FilterView.sliderConfidence = this.p.createSlider(0, 100, 0);
+    static setupSliders() {
+        if (FilterView.sliderSupport !== null){
+            FilterView.sliderSupport.remove();
+            FilterView.supportVal = 1;
+            FilterView.sliderSupport = null;
+        }
+
+        if (FilterView.sliderConfidence !== null){
+            FilterView.sliderConfidence.remove();
+            FilterView.confVal = 0;
+            FilterView.sliderConfidence = null;
+        }
+
+        FilterView.sliderSupport = FilterView.p5.createSlider(0, 100, 1);
+        FilterView.sliderConfidence = FilterView.p5.createSlider(0, 100, 0);
         FilterView.sliderSupport.position(FilterView.canvas.x + FilterView.xSliderMargin, FilterView.canvas.y + FilterView.yMargin + 25);
         FilterView.sliderConfidence.position(FilterView.canvas.x + FilterView.xSliderMargin, FilterView.canvas.y + FilterView.yMargin + 50);
 
-        FilterView.sliderSupport.input(this.supportSliderOnChange);
-        FilterView.sliderConfidence.input(this.confSliderOnChange);
+        FilterView.sliderSupport.input(FilterView.supportSliderOnChange);
+        FilterView.sliderConfidence.input(FilterView.confSliderOnChange);
     }
 
     /**
      * Update support according to the value of the slider
      * Update the rules
      */
-    supportSliderOnChange() {
+    static supportSliderOnChange() {
         FilterView.supportVal = FilterView.sliderSupport.value();
         FilterView.updateFilteredRules();
     }
@@ -1126,7 +1297,7 @@ class FilterView {
      * Update confidence according to the value of the slider
      * Update the rules
      */
-    confSliderOnChange() {
+    static confSliderOnChange() {
         FilterView.confVal = FilterView.sliderConfidence.value();
         FilterView.updateFilteredRules();
     }
@@ -1135,20 +1306,28 @@ class FilterView {
      * Create a selected to select the Feature Attribute
      */
     static setupSelector() {
-        let sel = FilterView.p5.createSelect();
-        sel.size(200);
-        sel.position(FilterView.canvas.x + FilterView.xMargin + FilterView.p5.textWidth("Feature:") + 10, FilterView.yMargin + 120);
-        // add all features to the selector
-        for (let feature of RulesView.featureOrder) {
-            sel.option(feature.name);
-            FilterView.selectedAttributes.set(feature, []);
+        if (ControlView.loadedRulesAndDataPair){
+            let sel = FilterView.p5.createSelect();
+            sel.size(200);
+            sel.position(FilterView.canvas.x + FilterView.xMargin + FilterView.p5.textWidth("Feature:") + 10, FilterView.yMargin + 120);
+            // add all features to the selector
+            FilterView.selectedAttributes.clear();
+            for (let feature of RulesView.featureOrder) {
+                sel.option(feature.name);
+                FilterView.selectedAttributes.set(feature, []);
+            }
+            //If selector changed, call mySelectEvent
+            sel.changed(FilterView.selectorChangedEvent);
+            //Save the selectBox as a static variable
+            FilterView.selectBox = sel;
+            //Call mySelectEvent for the first time
+            FilterView.selectorChangedEvent();
+        } else {
+            FilterView.selectedAttributes.clear();
+            if (FilterView.selectBox !== null){
+                FilterView.selectBox.remove();
+            }
         }
-        //If selector changed, call mySelectEvent
-        sel.changed(FilterView.selectorChangedEvent);
-        //Save the selectBox as a static variable
-        FilterView.selectBox = sel;
-        //Call mySelectEvent for the first time
-        FilterView.selectorChangedEvent();
     }
 
     /**
@@ -1164,22 +1343,10 @@ class FilterView {
 
         //request the feature of the selectBox
         let item = FilterView.selectBox.value();
-        // remove all checkboxes
-        for (let checkbox of FilterView.checkboxes) {
-            checkbox.remove();
-        }
 
-        if (FilterView.minInput !== null) {
-            FilterView.minInput.remove();
-            FilterView.minInput = null;
-        }
+        // clear all input for filters
+        FilterView.clearInputForFilters();
 
-        if (FilterView.maxInput !== null) {
-            FilterView.maxInput.remove();
-            FilterView.maxInput = null;
-        }
-        //Empty the list of checkboxes
-        FilterView.checkboxes = [];
 
         let correct_feature = null;
         // find correct feature
@@ -1254,6 +1421,24 @@ class FilterView {
         }
     }
 
+    static clearInputForFilters(){
+        for (let checkbox of FilterView.checkboxes) {
+            checkbox.remove();
+        }
+
+        if (FilterView.minInput !== null) {
+            FilterView.minInput.remove();
+            FilterView.minInput = null;
+        }
+
+        if (FilterView.maxInput !== null) {
+            FilterView.maxInput.remove();
+            FilterView.maxInput = null;
+        }
+        //Empty the list of checkboxes
+        FilterView.checkboxes = [];
+    }
+
     /**
      * Method called when a checkbox is checked
      * Add the attribute to the selectedAttributes and update the data, and rules
@@ -1289,6 +1474,7 @@ class FilterView {
     }
 
     static adjustIntegerInputBoxes() {
+        RulesView.ruleMinFontSize = 99;
         let feature_name = FilterView.selectBox.value();
         let correct_feature = null;
         for (let feature of RulesView.featureOrder) {
@@ -1377,6 +1563,10 @@ class FilterView {
         }
     }
 
+    static updateDarkModeColors() {
+        FilterView.selectorChangedEvent();
+    }
+
     get p() {
         return this._p;
     }
@@ -1413,17 +1603,19 @@ class InfoView {
         return function () {
             self.p.background(backgroundColor);
             self.drawBorder();
-            self.drawPill();
-            let last_y = self.drawLegend();
-            self.drawStatistics(last_y);
+            if (ControlView.loadedRulesAndDataPair){
+                self.drawPill();
+                let last_y = self.drawLegend();
+                self.drawStatistics(last_y);
+            }
         }
     }
 
     drawBorder() {
         this.p.push();
         this.p.fill(backgroundColor);
-        this.p.stroke("#272727");
-        this.p.strokeWeight(4);
+        // this.p.stroke("#272727");
+        this.p.strokeWeight(0);
         this.p.rect(0, 0, this.p.width, this.p.height);
         this.p.pop();
     }
@@ -1450,34 +1642,32 @@ class InfoView {
 
             //set location and width
             let x = (this.p.width) / 2;
-            let y = 60;
+            let y = 80;
             let width = this.p.width - 100;
             //drae colored part of pull
             this.p.rectMode(this.p.CENTER);
-            this.p.rect(x, y, width, 30, 50);
+            this.p.rect(x, y, width, 50, 50);
 
             //draw white part of pill
             let tempX = x + width / 4; //set x to correct x for CORNER
             let tempWidth = width * ratio; //find relative part of width
             this.p.fill(backgroundColor);
-            this.p.rect(tempX, y, tempWidth, 30, 0, 50, 50, 0);
+            this.p.rect(tempX, y, tempWidth, 50, 0, 50, 50, 0);
 
             //fill with text
-            this.p.textAlign(this.p.LEFT);
+            this.p.textAlign(this.p.CENTER, this.p.CENTER);
             this.p.fill(backgroundColor);
             this.p.strokeWeight(0);
-            this.p.textSize(12);
-            x = (this.p.width) * 1 / 4;
-            this.p.text('Correctly', x, y - 2);
-            this.p.text('classified', x, y + 10);
+            this.p.textSize(15);
+            x = width / 4 + 50;
+            this.p.text('Correctly\nclassified', x, y);
 
             this.p.fill(color);
-            x = (this.p.width) * 1 / 2 + 1 / 8 * width;
-            this.p.text('Incorrectly', x, y - 2);
-            this.p.text('classified', x + 2, y + 10);
+            x = width * 3 / 4 + 50;
+            this.p.text('Incorrectly\nclassified', x, y);
 
             this.p.fill(primaryColor);
-            this.p.textSize(25);
+            this.p.textSize(32);
             this.p.textAlign(this.p.LEFT);
             this.p.text("Legend", 25, 30);
         }
@@ -1490,7 +1680,7 @@ class InfoView {
     drawLegend() {
         // Draw labels outcome
         let x = 25;
-        let y = 115 - 15;
+        let y = 135- 15;
         this.p.push();
         // Draw the text
         this.p.textAlign(this.p.LEFT);
@@ -1498,14 +1688,14 @@ class InfoView {
         this.p.strokeWeight(primaryColor);
         this.p.textSize(20);
         let title = "Labels:";
-        this.p.text(title, 25, 115);
+        this.p.text(title, 25, 135);
 
         this.p.pop();
 
         // Find correct outcomeFeature
         let outcomeFeature = RulesView.featureOrder.find(feature => feature.isLabel);
         // Only draw if outcomeFeature is defined
-        let last_y = 135;
+        let last_y = 150;
         if (typeof outcomeFeature !== 'undefined') {
             for (let value of outcomeFeature.values) {
                 //create temp stule
@@ -1529,7 +1719,7 @@ class InfoView {
         return last_y
     }
 
-    drawStatistics(last_y){
+    drawStatistics(last_y) {
         this.p.push();
         // Draw the text
         this.p.textAlign(this.p.LEFT);
@@ -1537,16 +1727,16 @@ class InfoView {
         this.p.strokeWeight(primaryColor);
         this.p.textSize(20);
         let stat_title = "Statistics:";
-        this.p.text(stat_title, 25, last_y );
+        this.p.text(stat_title, 25, last_y);
 
-        last_y += 20;
+        // last_y += 20;
 
         this.p.textSize(15);
-        if(RulesView.rules){
-            this.p.text('Accuracy: ' + ControlView.all_data.rules.accuracy, 25, last_y + 20 )
-            this.p.text('Precision: ' + ControlView.all_data.rules.precision, 25, last_y + 40 );
-            this.p.text('Recall: ' + ControlView.all_data.rules.recall, 25, last_y + 60 );
-            this.p.text('F1 Score: ' + ControlView.all_data.rules.f1_score, 25, last_y + 80 );
+        if (RulesView.rules) {
+            this.p.text('Accuracy: ' + (ControlView.all_data.rules.accuracy*100).toFixed(2) + "%", 25, last_y + 20);
+            this.p.text('Precision: ' + (ControlView.all_data.rules.precision*100).toFixed(2) + "%", 25, last_y + 40);
+            this.p.text('Recall: ' + (ControlView.all_data.rules.recall*100).toFixed(2) + "%", 25, last_y + 60);
+            this.p.text('F1 Score: ' + (ControlView.all_data.rules.f1_score*100).toFixed(2) + "%", 25, last_y + 80);
         }
 
         this.p.pop();
