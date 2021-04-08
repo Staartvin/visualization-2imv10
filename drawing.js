@@ -145,14 +145,13 @@ class RulesView {
             self.p.background(backgroundColor);
 
             // We check if we can draw the rules, and otherwise, we tell the user what to do.
-            if (ControlView.error){
-                if (ControlView.errorText.includes("csv")){
+            if (ControlView.error) {
+                if (ControlView.errorText.includes("csv")) {
                     self.drawInformation("There seems to be an error\n" + ControlView.errorText);
                 } else {
                     self.drawInformation("There seems to be an error\n Please check if your data set belongs to the rule decision list. \n(" + ControlView.errorText + ")");
                 }
-            }
-            else if (ControlView.loading) {
+            } else if (ControlView.loading) {
                 self.drawInformation("Loading... (Sit back and relax, this may take a while)");
             } else if (ControlView.loadedRulesAndDataPair) {
                 self.drawRules();
@@ -269,42 +268,42 @@ class RulesView {
             this.p.strokeWeight(0);
             this.p.textStyle(this.p.NORMAL);
             let featureNames = null;
-            if (feature.name.includes(" ")){
+            if (feature.name.includes(" ")) {
                 featureNames = feature.name.split(" ");
-            } else if (/[A-Z]/.test(feature.name)){
+            } else if (/[A-Z]/.test(feature.name)) {
                 featureNames = feature.name.match(/[A-Z][a-z]+/g);
             } else {
                 featureNames = [feature.name];
             }
             let maxLength = 13;
-            for (let i = 0; i<featureNames.length;  i++){
+            for (let i = 0; i < featureNames.length; i++) {
                 let name = featureNames[i];
-                if (name.length > maxLength){
+                if (name.length > maxLength) {
                     let names = null;
                     let splitbyslash = false;
-                    if (name.includes("/")){
+                    if (name.includes("/")) {
                         names = name.split("/");
                         splitbyslash = true;
                     } else {
                         names = name.match(/.{1,13}/g);
                     }
                     featureNames.splice(i, 1);
-                    for (let j = 0; j<names.length; j++){
+                    for (let j = 0; j < names.length; j++) {
                         let text = names[j];
-                        if (j !== names.length - 1){
+                        if (j !== names.length - 1) {
                             text += splitbyslash ? "/" : "-";
                         }
-                        featureNames.splice(i+j, 0, text);
+                        featureNames.splice(i + j, 0, text);
                     }
                 } else { //smaller than maxLength, see if next word would fit
-                    while (i !== featureNames.length - 1 && featureNames[i].length + featureNames[i+1].length + 1 < maxLength){
-                        featureNames[i] = featureNames[i] + " " + featureNames[i+1];
-                        featureNames.splice(i+1, 1);
+                    while (i !== featureNames.length - 1 && featureNames[i].length + featureNames[i + 1].length + 1 < maxLength) {
+                        featureNames[i] = featureNames[i] + " " + featureNames[i + 1];
+                        featureNames.splice(i + 1, 1);
                     }
                 }
             }
 
-            x -= (featureNames.length - 1)  * 7.5 + 15;
+            x -= (featureNames.length - 1) * 7.5 + 15;
 
             // P5 works a bit weird with rotations. Objects rotate with respect to the origin
             // This means that I have to place the text on the origin, rotate it and then translate it to where I want it to go.
@@ -312,7 +311,7 @@ class RulesView {
             this.p.textAlign(this.p.LEFT, this.p.CENTER);
             this.p.translate(x, y);
             this.p.rotate(degreeToRadians(-90));
-            for (name of featureNames){
+            for (name of featureNames) {
                 //rotate back
                 this.p.rotate(degreeToRadians(90));
                 // move
@@ -342,7 +341,7 @@ class RulesView {
      * @param maxWidth Width of the box
      * @return {number} the largest font size (in pt) that should be used to let the text fit.
      */
-    static computeFittingFontSize(text, maxHeight, maxWidth, constant=1) {
+    static computeFittingFontSize(text, maxHeight, maxWidth, constant = 1) {
         return constant * Math.sqrt((maxHeight * maxWidth) / text.length)
     }
 
@@ -363,20 +362,20 @@ class RulesView {
         this.p.pop();
     }
 
-    drawLoadIcon(){
+    drawLoadIcon() {
         this.p.push();
         this.p.ellipseMode(this.p.CENTER);
 
         let color = this.p.color(primaryColor);
-        let alphaIncrement = 255/8;
-        let x = this.p.width/2 + this.p.textWidth('Loading') + 10;
-        let y = this.p.height/2;
+        let alphaIncrement = 255 / 8;
+        let x = this.p.width / 2 + this.p.textWidth('Loading') + 10;
+        let y = this.p.height / 2;
 
-        let xCoordinates = [x-20, x-13.75, x, x+13.75, x+20, x+13.75, x, x-13.75];
-        let yCoordinates = [y, y-13.75, y-20, y-13.75, y, y+13.75, y+20, y+13.75];
+        let xCoordinates = [x - 20, x - 13.75, x, x + 13.75, x + 20, x + 13.75, x, x - 13.75];
+        let yCoordinates = [y, y - 13.75, y - 20, y - 13.75, y, y + 13.75, y + 20, y + 13.75];
 
-        for (let i=0; i<8; i++){
-            let alpha = ((Math.floor(RulesView.loadCounter) - i)%8)*alphaIncrement;
+        for (let i = 0; i < 8; i++) {
+            let alpha = ((Math.floor(RulesView.loadCounter) - i) % 8) * alphaIncrement;
             color.setAlpha(alpha);
             this.p.fill(color);
             this.p.ellipse(xCoordinates[i], yCoordinates[i], 10, 10);
@@ -697,6 +696,10 @@ class ControlView {
     static rulesFile = null;
     static errorText = "";
 
+    /**
+     * The data that is loaded using the file buttons
+     * @type {Data}
+     */
     static all_data = null;
 
     constructor(p) {
@@ -745,7 +748,7 @@ class ControlView {
 
         if (file.name !== 'Data.csv') {
             ControlView.error = true;
-            if (ControlView.errorText.includes('Rules.csv')){
+            if (ControlView.errorText.includes('Rules.csv')) {
                 ControlView.errorText = "The data file is not called 'Data.csv'!\nThe rules file is not called 'Rules.csv'!";
             } else {
                 ControlView.errorText = "The data file is not called 'Data.csv'!";
@@ -772,7 +775,7 @@ class ControlView {
 
     }
 
-    static resetRulesFile(){
+    static resetRulesFile() {
         ControlView.loadRulesButton.value('');
         ControlView.rulesFile = null;
         ControlView.loadedRulesAndDataPair = false;
@@ -789,7 +792,7 @@ class ControlView {
 
         if (file.name !== 'Rules.csv') {
             ControlView.error = true;
-            if (ControlView.errorText.includes('Data.csv')){
+            if (ControlView.errorText.includes('Data.csv')) {
                 ControlView.errorText += "\nThe rules file is not called 'Rules.csv'!";
             } else {
                 ControlView.errorText = "The rules file is not called 'Rules.csv'!";
@@ -815,7 +818,7 @@ class ControlView {
 
     }
 
-    static resetDataFile(){
+    static resetDataFile() {
         ControlView.dataFile = null;
         ControlView.loadDataButton.value('');
         ControlView.loadedRulesAndDataPair = false;
@@ -866,9 +869,9 @@ class ControlView {
                     throw(e);
                 });
         } else {
-            if (ControlView.dataFile === null){
+            if (ControlView.dataFile === null) {
                 ControlView.errorText = "The data file is not called 'Data.csv'!";
-            } else if (ControlView.rulesFile === null){
+            } else if (ControlView.rulesFile === null) {
                 ControlView.errorText = "The rules file is not called 'Rules.csv'!";
             }
             // ControlView.errorText = "Could not load the visualization \nas either of the files is not valid!";
@@ -877,7 +880,7 @@ class ControlView {
 
     }
 
-    static reset(){
+    static reset() {
 
         RulesView.ruleMinFontSize = 99;
 
@@ -1263,13 +1266,13 @@ class FilterView {
      * Create the sliders for confidence and support
      */
     static setupSliders() {
-        if (FilterView.sliderSupport !== null){
+        if (FilterView.sliderSupport !== null) {
             FilterView.sliderSupport.remove();
             FilterView.supportVal = 1;
             FilterView.sliderSupport = null;
         }
 
-        if (FilterView.sliderConfidence !== null){
+        if (FilterView.sliderConfidence !== null) {
             FilterView.sliderConfidence.remove();
             FilterView.confVal = 0;
             FilterView.sliderConfidence = null;
@@ -1306,7 +1309,7 @@ class FilterView {
      * Create a selected to select the Feature Attribute
      */
     static setupSelector() {
-        if (ControlView.loadedRulesAndDataPair){
+        if (ControlView.loadedRulesAndDataPair) {
             let sel = FilterView.p5.createSelect();
             sel.size(200);
             sel.position(FilterView.canvas.x + FilterView.xMargin + FilterView.p5.textWidth("Feature:") + 10, FilterView.yMargin + 120);
@@ -1324,7 +1327,7 @@ class FilterView {
             FilterView.selectorChangedEvent();
         } else {
             FilterView.selectedAttributes.clear();
-            if (FilterView.selectBox !== null){
+            if (FilterView.selectBox !== null) {
                 FilterView.selectBox.remove();
             }
         }
@@ -1421,7 +1424,7 @@ class FilterView {
         }
     }
 
-    static clearInputForFilters(){
+    static clearInputForFilters() {
         for (let checkbox of FilterView.checkboxes) {
             checkbox.remove();
         }
@@ -1523,10 +1526,12 @@ class FilterView {
      * Call method to update the rules according to support and confidence
      */
     static updateFilteredRules() {
+        let startTime = performance.now();
         RulesView.filtered_rules.rules = FilterView.filterRulesByVal(RulesView.rules.rules, {
             support: FilterView.supportVal,
             confidence: FilterView.confVal
         });
+        console.log("Took " + (performance.now() - startTime) + " milliseconds to filter the rules.");
     }
 
     /**
@@ -1536,6 +1541,7 @@ class FilterView {
      * @returns {*}
      */
     static filterRulesByVal(rules_to_filter, criteria) {
+
         return rules_to_filter.filter(function (rule) {
             return Object.keys(criteria).every(function (c) {
                 if (!rule.meetConditions(FilterView.selectedAttributes)) {
@@ -1552,6 +1558,7 @@ class FilterView {
                 }
             });
         });
+
     }
 
 
@@ -1603,7 +1610,7 @@ class InfoView {
         return function () {
             self.p.background(backgroundColor);
             self.drawBorder();
-            if (ControlView.loadedRulesAndDataPair){
+            if (ControlView.loadedRulesAndDataPair) {
                 self.drawPill();
                 let last_y = self.drawLegend();
                 self.drawStatistics(last_y);
@@ -1680,7 +1687,7 @@ class InfoView {
     drawLegend() {
         // Draw labels outcome
         let x = 25;
-        let y = 135- 15;
+        let y = 135 - 15;
         this.p.push();
         // Draw the text
         this.p.textAlign(this.p.LEFT);
@@ -1733,10 +1740,10 @@ class InfoView {
 
         this.p.textSize(15);
         if (RulesView.rules) {
-            this.p.text('Accuracy: ' + (ControlView.all_data.rules.accuracy*100).toFixed(2) + "%", 25, last_y + 20);
-            this.p.text('Precision: ' + (ControlView.all_data.rules.precision*100).toFixed(2) + "%", 25, last_y + 40);
-            this.p.text('Recall: ' + (ControlView.all_data.rules.recall*100).toFixed(2) + "%", 25, last_y + 60);
-            this.p.text('F1 Score: ' + (ControlView.all_data.rules.f1_score*100).toFixed(2) + "%", 25, last_y + 80);
+            this.p.text('Accuracy: ' + (ControlView.all_data.rules.accuracy * 100).toFixed(2) + "%", 25, last_y + 20);
+            this.p.text('Precision: ' + (ControlView.all_data.rules.precision * 100).toFixed(2) + "%", 25, last_y + 40);
+            this.p.text('Recall: ' + (ControlView.all_data.rules.recall * 100).toFixed(2) + "%", 25, last_y + 60);
+            this.p.text('F1 Score: ' + (ControlView.all_data.rules.f1_score * 100).toFixed(2) + "%", 25, last_y + 80);
         }
 
         this.p.pop();

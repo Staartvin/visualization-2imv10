@@ -22,6 +22,7 @@ class Data {
         this.filtered_data = [];
 
         return new Promise((resolve, reject) => {
+            let startTime = performance.now();
             Papa.parse(dataFile, {
                 header: true, //data contains header
                 download: true, //let parser know that file is located at path_to_data
@@ -33,7 +34,10 @@ class Data {
                     that.all_indeces = [...Array(that.full_data.length).keys()];
 
                     try {
+                        console.log("Took " + (performance.now() - startTime) + " milliseconds for the data to be imported.");
+                        startTime = performance.now();
                         that.importFeaturesAndItsValues(results);
+                        console.log("Took " + (performance.now() - startTime) + " milliseconds to import features and values of the data.");
                         resolve();
                     } catch (e) {
                         reject(e);
@@ -133,6 +137,7 @@ class Data {
         // Reset rules.
         this.rules =  new Rules();
         return new Promise((resolve, reject) => {
+            var startTime = performance.now();
             Papa.parse(rulesFile, {
                 download: true, //let parser know that file is located at path_to_rules
                 dynamicTyping: true, //create ints and such dynamically
@@ -237,6 +242,8 @@ class Data {
                         }
                     });
 
+                    console.log("Took " + (performance.now() - startTime) + " milliseconds for rules to be imported.");
+
                     // We successfully imported the rules.
                     resolve();
                 }
@@ -251,6 +258,7 @@ class Data {
      * @returns {[Feature]} ordered list of feature names
      */
     getOrderingOfFeatures() {
+        let startTime = performance.now();
         // Store the feature and its score
         let feature_strength_list = new Map();
 
@@ -281,6 +289,8 @@ class Data {
 
         // Add the label feature at the back (otherwise we wouldn't have a label).
         featureOrder.push(this.metadata.getFeature("label"));
+
+        console.log("Took " + (performance.now() - startTime) + " milliseconds to determine the feature ordering.");
 
         // Return this feature ordering.
         return featureOrder;
@@ -336,10 +346,13 @@ class Feature {
         this.name = name;
         this.values = new Set();
         this.isLabel = false;
-        this.isNumeric = true;
+        this.isNumeric = false;
         this.min = Number.MAX_SAFE_INTEGER;
         this.max = Number.MIN_SAFE_INTEGER;
-        this.numberOfValues = 0;
+    }
+
+    get numberOfValues() {
+        return this.values.size;
     }
 
     /**
@@ -347,9 +360,19 @@ class Feature {
      * @param value
      */
     addValue(value) {
-        if (value !== "" && value !== null) { //only add value if not empty
+        // Check if the value is not null
+        if (value !== null) {
+            // But also check if the value is a string. If it is a string, check if it is non empty
+            if (typeof value == 'string' && value.length === 0) {
+                return;
+            }
             this.values.add(value);
-            this.isNumeric = this.isNumerical();
+
+            // Check if the value is a float. In that case, we have a numeric value
+            if (!this.isNumeric && parseFloat(value) === value) {
+                this.isNumeric = true;
+            }
+
             if (this.isNumeric) {
                 if (value < this.min) {
                     this.min = value;
@@ -361,21 +384,9 @@ class Feature {
                 this.min = NaN;
                 this.max = NaN;
             }
-
-            this.numberOfValues = this.values.size;
         }
 
     }
-
-    isNumerical() {
-        for (let value of this.values) {
-            if (parseFloat(value) !== value) {
-                return false;
-            }
-        }
-        return true;
-    }
-
 }
 
 class Rules {
@@ -415,8 +426,11 @@ class Rules {
      * Function that computes the support of a rule.
      * Returns the support value of a rule.
      * @param {Data} all_data all data in the dataset
+     * @param {Set} metadata Set of labels of the data
      */
     calculateSupportAndConf(all_data, metadata) {
+        let startTime = performance.now();
+
         //reset everything to 0
         for (let rule of this.rules) {
             rule.instancesSatisfiedByRules = 0;
@@ -429,7 +443,6 @@ class Rules {
         if (all_data) {
             predicted = new Array(all_data.length).fill('NaN');
         }
-
 
         //loop over all data and check by while rule the data is satisfied
         let numberOfRows = 0;
@@ -458,7 +471,7 @@ class Rules {
 
         this.calculateConfusionMatrix(metadata, predicted, all_data, numberOfRows);
 
-
+        console.log("Took " + (performance.now() - startTime) + " milliseconds to calculate support and confidence.");
     }
 
     calculateConfusionMatrix(metadata, predicted, all_data, numberOfRows){
